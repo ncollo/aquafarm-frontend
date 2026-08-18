@@ -53,8 +53,9 @@ export function Gallery() {
   const [activeTab, setActiveTab] = useState("farm");
   const [lightbox, setLightbox] = useState<{ src: string; caption: string } | null>(null);
 
-  const allImages = galleries.flatMap(g => g.images.map(img => ({ ...img, category: g.label })));
-  const current = activeTab === "all" ? allImages : galleries.find(g => g.id === activeTab)?.images ?? [];
+  const tabs = [{ id: "all", label: "All Photos" }, ...galleries.map((g) => ({ id: g.id, label: g.label }))];
+  const allImages = galleries.flatMap((g) => g.images.map((img) => ({ ...img, category: g.label })));
+  const current = activeTab === "all" ? allImages : galleries.find((g) => g.id === activeTab)?.images ?? [];
 
   return (
     <div>
@@ -72,15 +73,14 @@ export function Gallery() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
         {/* Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-8 justify-center">
-          {[{ id: "all", label: "All Photos" }, ...galleries].map(tab => (
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`whitespace-nowrap px-5 py-2 rounded-xl text-sm font-medium transition-colors ${
-                activeTab === tab.id ? "bg-teal-700 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+              className={`whitespace-nowrap px-5 py-2 rounded-xl text-sm font-medium transition-colors ${activeTab === tab.id ? "bg-teal-700 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
             >
-              {"label" in tab ? tab.label : tab.id}
+              {tab.label}
             </button>
           ))}
         </div>
