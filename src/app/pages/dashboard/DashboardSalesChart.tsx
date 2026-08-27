@@ -5,9 +5,10 @@ type DashboardSalesChartProps = {
     cardBg: string;
     cardBorder: string;
     textPrimary: string;
+    data?: any[];
 };
 
-const salesData = [
+const defaultSalesData = [
     { month: "Oct", tilapia: 180, catfish: 95, trout: 40, carp: 30 },
     { month: "Nov", tilapia: 220, catfish: 110, trout: 55, carp: 25 },
     { month: "Dec", tilapia: 310, catfish: 140, trout: 70, carp: 45 },
@@ -34,12 +35,15 @@ const CustomTooltip = ({ active, payload, label, isDark }: any) => {
     );
 };
 
-export default function DashboardSalesChart({ isDark, cardBg, cardBorder, textPrimary }: DashboardSalesChartProps) {
+export default function DashboardSalesChart({ isDark, cardBg, cardBorder, textPrimary, data }: DashboardSalesChartProps) {
+    const chartData = data && data.length > 0 ? data : defaultSalesData;
+
     return (
         <div className={`rounded-2xl p-5 shadow-sm border ${cardBg} ${cardBorder}`}>
             <h3 className={`font-semibold mb-4 ${textPrimary}`}>Sales Volume by Species (kg)</h3>
             <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={salesData}>
+                <BarChart data={chartData}>
+
                     <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#374151" : "#f0f0f0"} />
                     <XAxis dataKey="month" tick={{ fontSize: 11, fill: isDark ? "#9ca3af" : "#6b7280" }} />
                     <YAxis tick={{ fontSize: 11, fill: isDark ? "#9ca3af" : "#6b7280" }} />
