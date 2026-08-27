@@ -171,3 +171,163 @@ export async function submitJobApplication(
     message: "Application received! We will review and contact you within 5 business days.",
   };
 }
+
+
+const API_BASE = "http://localhost:5000/api"; 
+
+
+export async function fetchProducts(): Promise<any[]> {
+  try {
+    const response = await fetch(`${API_BASE}/products`);
+    if (!response.ok) throw new Error("Failed to fetch products");
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error fetching products:", error);
+    return [];
+  }
+}
+
+
+export async function createLiveProduct(formData: FormData): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE}/products`, {
+      method: 'POST',
+      body: formData, // Sending multipart/form-data for the image buffer
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || "Failed to create product");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error creating product:", error);
+    throw error;
+  }
+}
+
+
+export async function uploadBulkImportDocument(file: File): Promise<any> {
+  try {
+    const formData = new FormData();
+    formData.append("document", file);
+
+    const response = await fetch(`${API_BASE}/imports/bulk`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || "Failed to process document");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error processing bulk import:", error);
+    throw error;
+  }
+}
+
+export async function updateLiveProduct(id: string, formData: FormData): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE}/products/${id}`, {
+      method: 'PUT',
+      body: formData,
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || "Failed to update product");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error updating product:", error);
+    throw error;
+  }
+}
+
+export async function deleteLiveProduct(id: string): Promise<void> {
+  try {
+    const response = await fetch(`${API_BASE}/products/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || "Failed to delete product");
+    }
+  } catch (error) {
+    console.error("[API] Error deleting product:", error);
+    throw error;
+  }
+}
+
+export async function fetchFishBatches(): Promise<any[]> {
+  try {
+    const response = await fetch(`${API_BASE}/stock/batches`);
+    if (!response.ok) throw new Error("Failed to fetch fish batches");
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error fetching batches:", error);
+    return [];
+  }
+}
+
+export async function createFishBatch(payload: any): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE}/stock/batches`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || "Failed to create batch");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error creating batch:", error);
+    throw error;
+  }
+}
+
+export async function deleteFishBatch(id: string): Promise<void> {
+  try {
+    const response = await fetch(`${API_BASE}/stock/batches/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || "Failed to delete batch");
+    }
+  } catch (error) {
+    console.error("[API] Error deleting batch:", error);
+    throw error;
+  }
+}
+
+
+export async function fetchSalesRecords(): Promise<any[]> {
+  try {
+    const response = await fetch(`${API_BASE}/sales`);
+    if (!response.ok) throw new Error("Failed to fetch sales records");
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error fetching sales:", error);
+    return [];
+  }
+}
+
+export async function createSaleRecord(payload: any): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE}/sales`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || "Failed to create sale");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error creating sale:", error);
+    throw error;
+  }
+}
