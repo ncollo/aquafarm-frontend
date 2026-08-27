@@ -442,4 +442,29 @@ export async function fetchOverviewAnalytics(): Promise<any> {
   }
 }
 
+// ─── Phase 11: Reports & PDF Generation API ───────────────────────────────────
+
+export async function downloadReportPdf(endpoint: string, defaultFilename = "aquafarm-report.pdf"): Promise<void> {
+  try {
+    const response = await fetch(`${API_BASE}/reports/${endpoint}`);
+    if (!response.ok) {
+      throw new Error(`Failed to download report (${response.statusText})`);
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = defaultFilename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("[API] Error downloading PDF report:", error);
+    throw error;
+  }
+}
+
+
 
