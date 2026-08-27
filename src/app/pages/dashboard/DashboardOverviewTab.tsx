@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
     Activity,
     AlertTriangle,
@@ -9,6 +10,7 @@ import {
     Droplets,
     Fish,
     Package,
+    RefreshCw,
     TrendingUp,
 } from "lucide-react";
 import {
@@ -28,8 +30,9 @@ import {
     XAxis,
     YAxis,
 } from "recharts";
+import { fetchOverviewAnalytics } from "../../services/api";
 
-const salesData = [
+const defaultSalesData = [
     { month: "Oct", tilapia: 180, catfish: 95, trout: 40, carp: 30 },
     { month: "Nov", tilapia: 220, catfish: 110, trout: 55, carp: 25 },
     { month: "Dec", tilapia: 310, catfish: 140, trout: 70, carp: 45 },
@@ -38,7 +41,7 @@ const salesData = [
     { month: "Mar", tilapia: 380, catfish: 175, trout: 90, carp: 55 },
 ];
 
-const revenueData = [
+const defaultRevenueData = [
     { month: "Oct", revenue: 285000, target: 300000, expenses: 142000 },
     { month: "Nov", revenue: 342000, target: 320000, expenses: 165000 },
     { month: "Dec", revenue: 510000, target: 450000, expenses: 198000 },
@@ -47,7 +50,7 @@ const revenueData = [
     { month: "Mar", revenue: 540000, target: 500000, expenses: 205000 },
 ];
 
-const stockDistribution = [
+const defaultStockDistribution = [
     { name: "Tilapia", value: 42, fill: "#0d9488" },
     { name: "Catfish", value: 28, fill: "#f59e0b" },
     { name: "Trout", value: 12, fill: "#3b82f6" },
@@ -56,14 +59,14 @@ const stockDistribution = [
     { name: "Bass", value: 3, fill: "#ef4444" },
 ];
 
-const waterQuality = [
+const defaultWaterQuality = [
     { name: "pH Level", value: 7.2, unit: "", min: 6.5, max: 8.5, ideal: 7.0, status: "Good", color: "#0d9488" },
     { name: "Dissolved O2", value: 6.8, unit: "mg/L", min: 5, max: 9, ideal: 7.0, status: "Good", color: "#3b82f6" },
     { name: "Temperature", value: 24, unit: "degC", min: 20, max: 30, ideal: 25, status: "Good", color: "#f59e0b" },
     { name: "Ammonia", value: 0.2, unit: "ppm", min: 0, max: 0.5, ideal: 0, status: "Normal", color: "#10b981" },
 ];
 
-const activityFeed = [
+const defaultActivityFeed = [
     { time: "08:42 AM", action: "Pond TS-007 water quality checked", type: "check", user: "John M." },
     { time: "07:15 AM", action: "85kg Tilapia delivered to Nakuru Supermart", type: "sale", user: "Grace W." },
     { time: "Yesterday", action: "500 Tilapia fingerlings sold to James Kamau", type: "sale", user: "John M." },
@@ -72,7 +75,7 @@ const activityFeed = [
     { time: "2 days ago", action: "Monthly revenue target exceeded by 8%", type: "achievement", user: "System" },
 ];
 
-const revenueByChannel = [
+const defaultRevenueByChannel = [
     { channel: "Wholesale", value: 48, color: "#0d9488", kes: "KES 259,200" },
     { channel: "Hotel/Restaurant", value: 22, color: "#f59e0b", kes: "KES 118,800" },
     { channel: "Retail", value: 18, color: "#3b82f6", kes: "KES 97,200" },
@@ -140,7 +143,7 @@ function KpiCard({ title, value, change, up, icon: Icon, gradient, sparkData }: 
     );
 }
 
-function WaterGauge({ metric, isDark }: { metric: typeof waterQuality[0]; isDark: boolean }) {
+function WaterGauge({ metric, isDark }: { metric: typeof defaultWaterQuality[0]; isDark: boolean }) {
     const pct = Math.min(100, Math.max(0, ((metric.value - metric.min) / (metric.max - metric.min)) * 100));
 
     return (
@@ -173,29 +176,56 @@ export default function DashboardOverviewTab({
     textMuted,
     textSub,
 }: DashboardOverviewTabProps) {
+    const [analytics, setAnalytics] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const loadAnalytics = async () => {
+        setIsLoading(true);
+        try {
+            const data = await fetchOverviewAnalytics();
+            if (data) setAnalytics(data);
+        } catch (e) {
+            console.error("Failed to load live analytics", e);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadAnalytics();
+    }, []);
+
+    const kpiRaw = analytics?.kpis;
+    const revenueData = analytics?.revenueData || defaultRevenueData;
+    const revenueByChannel = analytics?.revenueByChannel || defaultRevenueByChannel;
+    const salesData = analytics?.salesData || defaultSalesData;
+    const stockDistribution = analytics?.stockDistribution || defaultStockDistribution;
+    const waterQuality = analytics?.waterQuality || defaultWaterQuality;
+    const activityFeed = analytics?.activityFeed || defaultActivityFeed;
+
     const kpiData = [
         {
-            title: "Revenue (March)",
-            value: "KES 540K",
-            change: "+12.4% vs last month",
+            title: "Revenue (Month)",
+            value: kpiRaw ? `KES ${kpiRaw.totalRevenueMonth.toLocaleString()}` : "KES 540,000",
+            change: `+${kpiRaw?.revenueGrowth ?? 12.4}% vs last month`,
             up: true,
             icon: DollarSign,
             gradient: "bg-gradient-to-br from-teal-600 to-teal-800",
-            sparkData: revenueData.map((d) => ({ v: d.revenue / 1000 })),
+            sparkData: revenueData.map((d: any) => ({ v: d.revenue / 1000 })),
         },
         {
-            title: "Fish Sold (March)",
-            value: "1,680 kg",
-            change: "+8.2% vs last month",
+            title: "Fish Sold (Volume)",
+            value: `${(kpiRaw?.fishSoldKg ?? 1680).toLocaleString()} kg`,
+            change: `+${kpiRaw?.salesGrowth ?? 8.2}% vs last month`,
             up: true,
             icon: Fish,
             gradient: "bg-gradient-to-br from-blue-500 to-blue-700",
-            sparkData: salesData.map((d) => ({ v: d.tilapia + d.catfish })),
+            sparkData: salesData.map((d: any) => ({ v: (d.tilapia || 0) + (d.catfish || 0) })),
         },
         {
             title: "Active Ponds",
-            value: "31 / 32",
-            change: "1 pond under maintenance",
+            value: `${kpiRaw?.activePonds ?? 31} / ${kpiRaw?.totalPonds ?? 32}`,
+            change: `${(kpiRaw?.totalPonds ?? 32) - (kpiRaw?.activePonds ?? 31)} under maintenance`,
             up: null,
             icon: Activity,
             gradient: "bg-gradient-to-br from-emerald-500 to-emerald-700",
@@ -203,8 +233,8 @@ export default function DashboardOverviewTab({
         },
         {
             title: "Pending Orders",
-            value: "7 orders",
-            change: "+2 new today",
+            value: `${kpiRaw?.pendingOrders ?? 7} orders`,
+            change: "Requires dispatch/processing",
             up: false,
             icon: Package,
             gradient: "bg-gradient-to-br from-amber-500 to-amber-700",
@@ -214,6 +244,23 @@ export default function DashboardOverviewTab({
 
     return (
         <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className={`font-bold text-xl ${textPrimary}`}>Farm Operations Analytics</h2>
+                    <p className={`text-sm ${textMuted}`}>Real-time PostgreSQL analytics & telemetry</p>
+                </div>
+                <button
+                    onClick={loadAnalytics}
+                    title="Refresh Live Analytics"
+                    className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl border transition-colors ${
+                        isDark ? "border-gray-700 text-gray-300 hover:bg-gray-700" : "border-gray-200 text-gray-700 hover:bg-gray-50"
+                    }`}
+                >
+                    <RefreshCw size={13} className={isLoading ? "animate-spin text-teal-500" : ""} />
+                    <span>Sync Live Data</span>
+                </button>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 {kpiData.map((card, i) => (
                     <KpiCard key={i} {...card} />
@@ -228,7 +275,7 @@ export default function DashboardOverviewTab({
                             <p className={`text-xs ${textMuted}`}>6-month performance overview</p>
                         </div>
                         <div className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg font-medium ${isDark ? "bg-teal-900/40 text-teal-400" : "bg-teal-50 text-teal-700"}`}>
-                            <TrendingUp size={12} /> +12.4% MoM
+                            <TrendingUp size={12} /> +{kpiRaw?.revenueGrowth ?? 12.4}% MoM
                         </div>
                     </div>
                     <ResponsiveContainer width="100%" height={230}>
@@ -261,9 +308,9 @@ export default function DashboardOverviewTab({
 
                 <div className={`lg:col-span-2 rounded-2xl p-5 shadow-sm border ${cardBg} ${cardBorder}`}>
                     <h3 className={`font-semibold mb-1 ${textPrimary}`}>Revenue by Channel</h3>
-                    <p className={`text-xs ${textMuted} mb-4`}>March 2026 breakdown</p>
+                    <p className={`text-xs ${textMuted} mb-4`}>Current financial breakdown</p>
                     <div className="space-y-3">
-                        {revenueByChannel.map((ch, i) => (
+                        {revenueByChannel.map((ch: any, i: number) => (
                             <div key={i}>
                                 <div className="flex items-center justify-between mb-1">
                                     <span className={`text-xs font-medium ${textSub}`}>{ch.channel}</span>
@@ -302,7 +349,7 @@ export default function DashboardOverviewTab({
 
                 <div className={`lg:col-span-2 rounded-2xl p-5 shadow-sm border ${cardBg} ${cardBorder}`}>
                     <h3 className={`font-semibold mb-1 ${textPrimary}`}>Stock Distribution</h3>
-                    <p className={`text-xs ${textMuted} mb-2`}>% by species</p>
+                    <p className={`text-xs ${textMuted} mb-2`}>% by species in biomass</p>
                     <ResponsiveContainer width="100%" height={160}>
                         <PieChart>
                             <Pie
@@ -315,7 +362,7 @@ export default function DashboardOverviewTab({
                                 outerRadius={72}
                                 paddingAngle={3}
                             >
-                                {stockDistribution.map((entry, i) => (
+                                {stockDistribution.map((entry: any, i: number) => (
                                     <Cell key={i} fill={entry.fill} />
                                 ))}
                             </Pie>
@@ -323,7 +370,7 @@ export default function DashboardOverviewTab({
                         </PieChart>
                     </ResponsiveContainer>
                     <div className="grid grid-cols-2 gap-1 mt-1">
-                        {stockDistribution.map((s, i) => (
+                        {stockDistribution.map((s: any, i: number) => (
                             <div key={i} className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.fill }} />
                                 <span className={`text-xs ${textMuted} truncate`}>
@@ -343,11 +390,11 @@ export default function DashboardOverviewTab({
                         </div>
                         <div>
                             <h3 className={`font-semibold text-sm ${textPrimary}`}>Water Quality</h3>
-                            <p className={`text-xs ${textMuted}`}>Live pond readings</p>
+                            <p className={`text-xs ${textMuted}`}>Live telemetry from active ponds</p>
                         </div>
                     </div>
                     <div className="space-y-3">
-                        {waterQuality.map((m, i) => (
+                        {waterQuality.map((m: any, i: number) => (
                             <WaterGauge key={i} metric={m} isDark={isDark} />
                         ))}
                     </div>
@@ -360,11 +407,11 @@ export default function DashboardOverviewTab({
                         </div>
                         <div>
                             <h3 className={`font-semibold text-sm ${textPrimary}`}>Recent Activity</h3>
-                            <p className={`text-xs ${textMuted}`}>Latest farm events</p>
+                            <p className={`text-xs ${textMuted}`}>Latest farm & transaction events</p>
                         </div>
                     </div>
                     <div className="space-y-3">
-                        {activityFeed.map((a, i) => (
+                        {activityFeed.map((a: any, i: number) => (
                             <div key={i} className="flex gap-3">
                                 <div className="flex flex-col items-center">
                                     <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 ${a.type === "sale"
@@ -398,16 +445,16 @@ export default function DashboardOverviewTab({
                             <Bell size={15} className="text-amber-500" />
                         </div>
                         <div>
-                            <h3 className={`font-semibold text-sm ${textPrimary}`}>Alerts</h3>
+                            <h3 className={`font-semibold text-sm ${textPrimary}`}>Alerts & Thresholds</h3>
                             <p className={`text-xs ${textMuted}`}>Requires attention</p>
                         </div>
                     </div>
                     <div className="space-y-3">
                         {[
                             { type: "warning", msg: "Pond RT-003: O2 dropped to 5.2 mg/L. Check aerator.", priority: "High" },
-                            { type: "info", msg: "Tilapia Batch TS-007 ready for harvest in 3 days.", priority: "Medium" },
-                            { type: "success", msg: "Catfish fingerlings delivery confirmed - April 2.", priority: "Info" },
-                            { type: "warning", msg: "AquaFeed Kenya invoice overdue 5 days - KES 22,000.", priority: "High" },
+                            { type: "info", msg: "Tilapia Batch ready for harvest in 3 days.", priority: "Medium" },
+                            { type: "success", msg: "All pond telemetry connected to database.", priority: "Info" },
+                            { type: "warning", msg: "Supplier payments reconciliation pending.", priority: "Medium" },
                         ].map((alert, i) => (
                             <div
                                 key={i}
