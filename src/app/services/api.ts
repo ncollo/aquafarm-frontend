@@ -428,4 +428,18 @@ export async function deleteSupplier(id: string): Promise<void> {
     throw error;
   }
 }
+
+// ─── Phase 10: Live Analytics API ─────────────────────────────────────────────
+
+export async function fetchOverviewAnalytics(): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE}/analytics/overview`);
+    if (!response.ok) throw new Error("Failed to fetch analytics");
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error fetching overview analytics:", error);
+    return null;
+  }
+}
+
 
