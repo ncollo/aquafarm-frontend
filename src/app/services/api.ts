@@ -331,3 +331,36 @@ export async function createSaleRecord(payload: any): Promise<any> {
     throw error;
   }
 }
+
+export async function updateSaleRecord(id: string, payload: any): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE}/sales/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || "Failed to update sale");
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error updating sale:", error);
+    throw error;
+  }
+}
+
+export async function deleteSaleRecord(id: string): Promise<void> {
+  try {
+    const response = await fetch(`${API_BASE}/sales/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || "Failed to delete sale");
+    }
+  } catch (error) {
+    console.error("[API] Error deleting sale:", error);
+    throw error;
+  }
+}
