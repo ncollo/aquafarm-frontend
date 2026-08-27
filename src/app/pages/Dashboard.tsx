@@ -11,12 +11,6 @@ import {
 } from "lucide-react";
 
 
-const suppliers = [
-  { id: "SUP-001", name: "AquaFeed Kenya Ltd", category: "Fish Feed", contact: "+254 720 111 001", lastOrder: "15 Mar 2026", outstanding: "KES 0", status: "Active", rating: 5 },
-  { id: "SUP-002", name: "NutriStart Animal Feeds", category: "Fingerling Feed", contact: "+254 720 111 002", lastOrder: "10 Mar 2026", outstanding: "KES 12,000", status: "Active", rating: 4 },
-  { id: "SUP-004", name: "Solar Kenya Solutions", category: "Solar Energy", contact: "+254 720 111 004", lastOrder: "1 Feb 2026", outstanding: "KES 85,000", status: "Active", rating: 5 },
-];
-
 type Tab = "overview" | "stock" | "sales" | "reports" | "suppliers" | "products";
 
 // Lazy Loaded Dynamic Components
@@ -25,6 +19,8 @@ const DashboardSalesChart = lazy(() => import("./dashboard/DashboardSalesChart")
 const DashboardProductsTab = lazy(() => import("./dashboard/DashboardProductsTab"));
 const DashboardStockTab = lazy(() => import("./dashboard/DashboardStockTab"));
 const DashboardSalesTab = lazy(() => import("./dashboard/DashboardSalesTab"));
+const DashboardSuppliersTab = lazy(() => import("./dashboard/DashboardSuppliersTab"));
+
 
 export function Dashboard() {
   const { isAuthenticated, user, isLoading } = useAuth();
@@ -210,42 +206,22 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* ══ SUPPLIERS TAB (Phase 9) ══ */}
+        {/* ══ SUPPLIERS TAB (Phase 9 - Fully Dynamic CRM) ══ */}
         {activeTab === "suppliers" && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h2 className={`font-bold text-xl ${textPrimary}`}>Supplier Management</h2>
-                <p className={`text-sm ${textMuted}`}>Active suppliers</p>
-              </div>
-              <button className="flex items-center gap-2 bg-teal-700 hover:bg-teal-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
-                <Plus size={15} /> Add Supplier
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {suppliers.map((sup, i) => (
-                <div key={i} className={`rounded-2xl p-5 shadow-sm border ${cardBg} ${cardBorder}`}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className={`font-semibold ${textPrimary}`}>{sup.name}</p>
-                      <span className={`inline-block text-xs px-2 py-0.5 rounded-full mt-1 ${isDark ? "bg-gray-700 text-gray-300" : "bg-gray-100 text-gray-600"}`}>{sup.category}</span>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sup.status === "Active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}>{sup.status}</span>
-                  </div>
-                  <div className={`space-y-1.5 text-xs ${textSub}`}>
-                    <div className="flex justify-between"><span className={textMuted}>Contact</span><span>{sup.contact}</span></div>
-                    <div className="flex justify-between"><span className={textMuted}>Last Order</span><span>{sup.lastOrder}</span></div>
-                    <div className="flex justify-between">
-                      <span className={textMuted}>Outstanding</span>
-                      <span className={sup.outstanding !== "KES 0" ? "text-red-500 font-semibold" : "text-green-500 font-semibold"}>{sup.outstanding}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <Suspense fallback={<div className={`rounded-2xl p-6 border ${cardBg} ${cardBorder}`}><p className={`text-sm ${textMuted}`}>Loading supplier network...</p></div>}>
+            <DashboardSuppliersTab
+              isDark={isDark}
+              cardBg={cardBg}
+              cardBorder={cardBorder}
+              textPrimary={textPrimary}
+              textMuted={textMuted}
+              textSub={textSub}
+              divideColor={divideColor}
+              tableHover={tableHover}
+            />
+          </Suspense>
         )}
+
 
       </main>
     </div>
