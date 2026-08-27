@@ -20,6 +20,8 @@ const DashboardProductsTab = lazy(() => import("./dashboard/DashboardProductsTab
 const DashboardStockTab = lazy(() => import("./dashboard/DashboardStockTab"));
 const DashboardSalesTab = lazy(() => import("./dashboard/DashboardSalesTab"));
 const DashboardSuppliersTab = lazy(() => import("./dashboard/DashboardSuppliersTab"));
+const DashboardReportsTab = lazy(() => import("./dashboard/DashboardReportsTab"));
+
 
 
 export function Dashboard() {
@@ -158,53 +160,20 @@ export function Dashboard() {
             </Suspense>
           )}
 
-        {/* ══ REPORTS TAB (Phase 11) ══ */}
+        {/* ══ REPORTS TAB (Phase 11 - Document Generation Hub) ══ */}
         {activeTab === "reports" && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className={`font-bold text-xl ${textPrimary}`}>Reports & Analytics</h2>
-                <p className={`text-sm ${textMuted}`}>Download and view farm reports</p>
-              </div>
-              <button className={`flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-xl border transition-colors ${isDark ? "border-gray-700 text-gray-300 hover:bg-gray-700" : "border-gray-200 text-gray-700 hover:bg-gray-50"}`}>
-                <Download size={14} /> Export All
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {[
-                { title: "Monthly Sales Report", desc: "Revenue, orders, and top customers for March 2026", date: "Mar 26, 2026", type: "Sales", gradient: "from-teal-500 to-teal-700", icon: TrendingUp },
-                { title: "Fish Stock Report", desc: "Current stock, health status, and harvest forecast", date: "Mar 26, 2026", type: "Operations", gradient: "from-blue-500 to-blue-700", icon: Fish },
-                { title: "Q1 2026 Financial Summary", desc: "Revenue, expenses, profit margins — Jan–Mar 2026", date: "Mar 26, 2026", type: "Finance", gradient: "from-emerald-500 to-emerald-700", icon: DollarSign },
-                { title: "Water Quality Report", desc: "Pond health metrics, dissolved oxygen, pH levels", date: "Mar 25, 2026", type: "Health", gradient: "from-cyan-500 to-cyan-700", icon: Droplets },
-              ].map((r, i) => {
-                const Icon = r.icon;
-                return (
-                  <div key={i} className={`rounded-2xl shadow-sm border overflow-hidden ${cardBg} ${cardBorder}`}>
-                    <div className={`bg-gradient-to-r ${r.gradient} p-4 flex items-center gap-3`}>
-                      <div className="bg-white/20 p-2 rounded-xl">
-                        <Icon size={16} className="text-white" />
-                      </div>
-                      <div>
-                        <span className="text-white/70 text-xs font-medium">{r.type}</span>
-                        <p className="text-white font-semibold text-sm leading-tight">{r.title}</p>
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <p className={`text-sm ${textSub} mb-3 leading-relaxed`}>{r.desc}</p>
-                      <div className={`flex items-center justify-between text-xs ${textMuted}`}>
-                        <span>Generated: {r.date}</span>
-                        <button className="flex items-center gap-1 text-teal-500 font-semibold hover:text-teal-400 transition-colors">
-                          <Download size={12} /> Download PDF
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <Suspense fallback={<div className={`rounded-2xl p-6 border ${cardBg} ${cardBorder}`}><p className={`text-sm ${textMuted}`}>Loading report generator...</p></div>}>
+            <DashboardReportsTab
+              isDark={isDark}
+              cardBg={cardBg}
+              cardBorder={cardBorder}
+              textPrimary={textPrimary}
+              textMuted={textMuted}
+              textSub={textSub}
+            />
+          </Suspense>
         )}
+
 
         {/* ══ SUPPLIERS TAB (Phase 9 - Fully Dynamic CRM) ══ */}
         {activeTab === "suppliers" && (
