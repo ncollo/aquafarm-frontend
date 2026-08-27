@@ -31,7 +31,7 @@ export function WhatsAppButton() {
             Hi there! 👋 Chat with us on WhatsApp for instant support, fish orders, or visit booking.
           </p>
           <a
-            href="https://wa.me/254700000000?text=Hello%20Aquafarm%20Fisheries!%20I%20would%20like%20to%20inquire%20about..."
+            href="https://wa.me/254797185616?text=Hello%20Aquafarm%20Fisheries!%20I%20would%20like%20to%20inquire%20about..."
             target="_blank"
             rel="noopener noreferrer"
             className="block w-full bg-green-500 hover:bg-green-600 text-white text-center font-semibold text-sm py-2.5 rounded-xl transition-colors"
