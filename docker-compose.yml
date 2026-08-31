@@ -1,0 +1,66 @@
+services:
+  # ─── PostgreSQL Database ───────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: aquafarm-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aquafarmadmin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-AquafarmSecret2026!}
+      POSTGRES_DB: ${POSTGRES_DB:-aquafarm}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aquafarmadmin} -d ${POSTGRES_DB:-aquafarm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aquafarm-network
+
+  # ─── Express Node.js Backend ───────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: aquafarm-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aquafarmadmin}:${POSTGRES_PASSWORD:-AquafarmSecret2026!}@postgres:5432/${POSTGRES_DB:-aquafarm}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-aquafarm-production-super-secure-jwt-secret-2026}
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:80,http://localhost:5173,http://localhost:3000}
+    networks:
+      - aquafarm-network
+
+  # ─── React Frontend (Nginx Static Proxy) ──────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
+    container_name: aquafarm-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - aquafarm-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  aquafarm-network:
+    driver: bridge
