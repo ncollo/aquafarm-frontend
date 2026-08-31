@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { ImageWithFallback } from "../components/figma/ImageWithFallback";
-import { ShoppingCart, Search, Filter, Star, ArrowRight, Fish, Package, Truck, Shield, Plus, Minus, X, Phone, ArrowLeft } from "lucide-react";
+import {
+  ShoppingCart, Search, Filter, Star, ArrowRight, Fish, Package,
+  Truck, Shield, Plus, Minus, X, Phone, ArrowLeft, RefreshCw, CheckCircle2, AlertCircle
+} from "lucide-react";
+import { fetchProducts } from "../services/api";
 import api from "../../utils/api";
 
 type Category = "all" | "fish" | "rods" | "tackle" | "accessories" | "feed" | "fingerlings";
@@ -15,22 +19,14 @@ const categories: { id: Category; label: string }[] = [
   { id: "accessories", label: "Accessories" },
 ];
 
-const initialProducts = [
-  { id: 1, name: "Fresh Nile Tilapia (Whole)", category: "fish" as Category, price: 350, unit: "per kg", rating: 4.9, reviews: 120, stock: "In Stock", desc: "Farm-fresh whole tilapia, cleaned and ready. Average fish weight 400–600g.", image: "https://images.unsplash.com/photo-1649347173558-a305d7b8ff98?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0aWxhcGlhJTIwZmlzaCUyMHdhdGVyJTIwYXF1YWN1bHR1cmV8ZW58MXx8fHwxNzc0NTQ0MzY4fDA&ixlib=rb-4.1.0&q=80&w=1080", tag: "Bestseller" },
-  { id: 2, name: "Fresh African Catfish", category: "fish" as Category, price: 400, unit: "per kg", rating: 4.8, reviews: 84, stock: "In Stock", desc: "Whole catfish, farm-fresh. Available in sizes 500g–2kg per fish.", image: "https://images.unsplash.com/photo-1607629194620-a9726803827c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXNoJTIwZmFybSUyMGhhcnZlc3QlMjBmcmVzaCUyMGZpc2glMjB3b3JrZXJzfGVufDF8fHx8MTc3NDU0NDM4MXww&ixlib=rb-4.1.0&q=80&w=1080", tag: "Popular" },
-  { id: 3, name: "Premium Rainbow Trout", category: "fish" as Category, price: 650, unit: "per kg", rating: 4.9, reviews: 45, stock: "Limited", desc: "Cold-water premium trout, rich in Omega-3. Restaurant and hotel grade.", image: "https://images.unsplash.com/photo-1770529882297-d60092c0c834?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmcmVzaHdhdGVyJTIwZmlzaCUyMGNhcnAlMjBwb25kJTIwc3VyZmFjZXxlbnwxfHx8fDE3NzQ1NDQzODR8MA&ixlib=rb-4.1.0&q=80&w=1080", tag: "Premium" },
-  { id: 4, name: "Tilapia Fingerlings (100 pcs)", category: "fingerlings" as Category, price: 1500, unit: "per 100", rating: 4.8, reviews: 62, stock: "In Stock", desc: "Certified Grade-A Nile Tilapia fingerlings, 3–5cm. Disease-free, vaccinated.", image: "https://images.unsplash.com/photo-1738508041350-03453c14811c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXNoJTIwZmFybSUyMHBvbmQlMjBhZXJpYWwlMjBLZW55YXxlbnwxfHx8fDE3NzQ1NDQzNjh8MA&ixlib=rb-4.1.0&q=80&w=1080", tag: "Certified" },
-  { id: 5, name: "Catfish Fingerlings (50 pcs)", category: "fingerlings" as Category, price: 1200, unit: "per 50", rating: 4.7, reviews: 38, stock: "In Stock", desc: "African Catfish fingerlings, 4–6cm. Ready for pond stocking.", image: "https://images.unsplash.com/photo-1758854486625-2ef3d73853fc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxhcXVhcG9uaWNzJTIwd2F0ZXIlMjB0ZWNobm9sb2d5JTIwZmlzaCUyMHRhbmt8ZW58MXx8fHwxNzc0NTQ0Mzg0fDA&ixlib=rb-4.1.0&q=80&w=1080", tag: "In Stock" },
-  { id: 6, name: "Beginner Fishing Rod Set", category: "rods" as Category, price: 2500, unit: "per set", rating: 4.5, reviews: 29, stock: "In Stock", desc: "Complete starter kit — 1.8m fiberglass rod, spinning reel, line, and basic tackle box.", image: "https://images.unsplash.com/photo-1695035711091-0658605fe1d6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXNoaW5nJTIwZXF1aXBtZW50JTIwc3RvcmUlMjB0YWNrbGUlMjByb2RzfGVufDF8fHx8MTc3NDU0NDM3Nnww&ixlib=rb-4.1.0&q=80&w=1080", tag: "Starter" },
-  { id: 7, name: "Pro Angler Carbon Fiber Rod", category: "rods" as Category, price: 8500, unit: "per piece", rating: 4.9, reviews: 17, stock: "Limited", desc: "2.4m ultra-light carbon fiber rod. Professional grade for competitive sport fishing.", image: "https://images.unsplash.com/photo-1695035711091-0658605fe1d6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXNoaW5nJTIwZXF1aXBtZW50JTIwc3RvcmUlMjB0YWNrbGUlMjByb2RzfGVufDF8fHx8MTc3NDU0NDM3Nnww&ixlib=rb-4.1.0&q=80&w=1080", tag: "Pro" },
-  { id: 8, name: "Assorted Hooks Pack (50 pcs)", category: "tackle" as Category, price: 350, unit: "per pack", rating: 4.7, reviews: 55, stock: "In Stock", desc: "Mixed sizes 4–12 barbless hooks. Suitable for tilapia and catfish.", image: "https://images.unsplash.com/photo-1695035711091-0658605fe1d6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXNoaW5nJTIwZXF1aXBtZW50JTIwc3RvcmUlMjB0YWNrbGUlMjByb2RzfGVufDF8fHx8MTc3NDU0NDM3Nnww&ixlib=rb-4.1.0&q=80&w=1080", tag: "Value Pack" },
-  { id: 9, name: "Artificial Lure Collection (10 pcs)", category: "tackle" as Category, price: 1200, unit: "per set", rating: 4.6, reviews: 22, stock: "In Stock", desc: "10 colorful artificial lures for bass and catfish. Floating and sinking types included.", image: "https://images.unsplash.com/photo-1695035711091-0658605fe1d6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXNoaW5nJTIwZXF1aXBtZW50JTIwc3RvcmUlMjB0YWNrbGUlMjByb2RzfGVufDF8fHx8MTc3NDU0NDM3Nnww&ixlib=rb-4.1.0&q=80&w=1080", tag: "In Stock" },
-  { id: 10, name: "Premium Floating Pellets (5kg)", category: "feed" as Category, price: 950, unit: "per bag", rating: 4.9, reviews: 73, stock: "In Stock", desc: "High-protein (38%) floating fish pellets for Tilapia and Catfish grow-out stage.", image: "https://images.unsplash.com/photo-1738508041350-03453c14811c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXNoJTIwZmFybSUyMHBvbmQlMjBhZXJpYWwlMjBLZW55YXxlbnwxfHx8fDE3NzQ1NDQzNjh8MA&ixlib=rb-4.1.0&q=80&w=1080", tag: "Certified Feed" },
-  { id: 11, name: "Fingerling Starter Crumbles (1kg)", category: "feed" as Category, price: 450, unit: "per bag", rating: 4.8, reviews: 41, stock: "In Stock", desc: "Ultra-fine 45% protein starter feed crumbles for fingerlings up to 10g.", image: "https://images.unsplash.com/photo-1738508041350-03453c14811c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXNoJTIwZmFybSUyMHBvbmQlMjBhZXJpYWwlMjBLZW55YXxlbnwxfHx8fDE3NzQ1NDQzNjh8MA&ixlib=rb-4.1.0&q=80&w=1080", tag: "Starter" },
-  { id: 12, name: "Fishing Hat & UV Gloves Set", category: "accessories" as Category, price: 800, unit: "per set", rating: 4.5, reviews: 18, stock: "In Stock", desc: "Wide-brim waterproof fishing hat and UV-protection fingerless gloves. Perfect for outdoor fishing.", image: "https://images.unsplash.com/photo-1695035711091-0658605fe1d6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXNoaW5nJTIwZXF1aXBtZW50JTIwc3RvcmUlMjB0YWNrbGUlMjByb2RzfGVufDF8fHx8MTc3NDU0NDM3Nnww&ixlib=rb-4.1.0&q=80&w=1080", tag: "New" },
-];
-
-interface CartItem { id: string | number; name: string; price: number; qty: number; unit: string; }
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  qty: number;
+  unit: string;
+  stock: number;
+}
 
 export function Store() {
   const [activeCategory, setActiveCategory] = useState<Category>("all");
@@ -38,108 +34,164 @@ export function Store() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<"cart" | "payment">("cart");
-  
-  const [addedItemId, setAddedItemId] = useState<string | number | null>(null);
-  const [allProducts, setAllProducts] = useState<any[]>(initialProducts);
+
+  const [addedItemId, setAddedItemId] = useState<string | null>(null);
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Customer Checkout Form
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [checkoutFeedback, setCheckoutFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  const loadProducts = async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchProducts();
+      const mapped = data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        category: p.category?.toLowerCase() as Category,
+        price: p.price,
+        unit: p.unit || "per kg",
+        stock: p.stock,
+        rating: 4.9,
+        reviews: Math.floor(Math.random() * 40) + 15,
+        desc: p.description || "Farm-fresh aquaculture product directly from Aquafarm Fisheries.",
+        image: p.imageUrl || "https://images.unsplash.com/photo-1649347173558-a305d7b8ff98?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0aWxhcGlhJTIwZmlzaCUyMHdhdGVyJTIwYXF1YWN1bHR1cmV8ZW58MXx8fHwxNzc0NTQ0MzY4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+        status: p.status,
+      }));
+      setAllProducts(mapped);
+    } catch (error) {
+      console.error("Failed to fetch store products:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchLiveInventory = async () => {
-      try {
-        const response = await api.get('/inventory');
-        const liveBatches = response.data.map((batch: any) => ({
-          id: batch.id, 
-          name: `${batch.species} (Batch: ${batch.batchCode})`,
-          category: "fish" as Category,
-          price: batch.pricePerKg,
-          unit: "per kg",
-          rating: 5.0,
-          reviews: 0,
-          stock: batch.totalKg > 0 ? `${batch.totalKg} kg Available` : "Out of Stock",
-          desc: `Freshly updated stock from the farm. Health Status: ${batch.healthStatus || 'Good'}`,
-          image: "https://images.unsplash.com/photo-1649347173558-a305d7b8ff98?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0aWxhcGlhJTIwZmlzaCUyMHdhdGVyJTIwYXF1YWN1bHR1cmV8ZW58MXx8fHwxNzc0NTQ0MzY4fDA&ixlib=rb-4.1.0&q=80&w=1080",
-          tag: "Live Stock"
-        }));
-
-        setAllProducts(prev => [
-          ...liveBatches,
-          ...prev.filter(p => p.category !== 'fish')
-        ]);
-      } catch (error) {
-        console.error("Failed to fetch live inventory", error);
-      }
-    };
-
-    fetchLiveInventory();
+    loadProducts();
   }, []);
 
-  const filtered = allProducts.filter(p =>
-    (activeCategory === "all" || p.category === activeCategory) &&
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = allProducts.filter((p) => {
+    const matchesCategory =
+      activeCategory === "all" ||
+      p.category === activeCategory ||
+      (activeCategory === "fish" && (p.category === "tilapia" || p.category === "catfish" || p.category === "trout"));
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.desc?.toLowerCase().includes(search.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
-  const addToCart = (product: typeof allProducts[0]) => {
-    setCart(prev => {
-      const existing = prev.find(i => i.id === product.id);
-      if (existing) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
-      return [...prev, { id: product.id, name: product.name, price: product.price, qty: 1, unit: product.unit }];
+  const addToCart = (product: any) => {
+    setCart((prev) => {
+      const existing = prev.find((i) => i.id === product.id);
+      if (existing) {
+        return prev.map((i) =>
+          i.id === product.id ? { ...i, qty: Math.min(product.stock, i.qty + 1) } : i
+        );
+      }
+      return [
+        ...prev,
+        {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          qty: 1,
+          unit: product.unit,
+          stock: product.stock,
+        },
+      ];
     });
 
     setAddedItemId(product.id);
     setTimeout(() => {
       setAddedItemId(null);
-    }, 2000);
+    }, 1800);
   };
 
-  const updateQty = (id: string | number, delta: number) => {
-    setCart(prev => prev.map(i => i.id === id ? { ...i, qty: Math.max(0, i.qty + delta) } : i).filter(i => i.qty > 0));
+  const updateQty = (id: string, delta: number) => {
+    setCart((prev) =>
+      prev
+        .map((i) => {
+          if (i.id === id) {
+            const nextQty = i.qty + delta;
+            return { ...i, qty: Math.min(i.stock, Math.max(0, nextQty)) };
+          }
+          return i;
+        })
+        .filter((i) => i.qty > 0)
+    );
   };
 
   const cartTotal = cart.reduce((sum, i) => sum + i.price * i.qty, 0);
   const cartCount = cart.reduce((sum, i) => sum + i.qty, 0);
 
   const handleMpesaCheckout = async () => {
-    if (!phoneNumber.startsWith('254') || phoneNumber.length < 12) {
-      alert("Please enter a valid Safaricom number starting with 254 (e.g., 2547XXXXXXXX)");
+    let cleanPhone = phoneNumber.trim().replace(/\s+/g, "");
+    if (cleanPhone.startsWith("0")) {
+      cleanPhone = `254${cleanPhone.slice(1)}`;
+    } else if (cleanPhone.startsWith("+")) {
+      cleanPhone = cleanPhone.slice(1);
+    }
+
+    if (!cleanPhone.startsWith("254") || cleanPhone.length < 12) {
+      setCheckoutFeedback({
+        type: "error",
+        message: "Please enter a valid Safaricom phone number (e.g. 0712345678 or 254712345678)",
+      });
       return;
     }
-    
+
     setIsCheckingOut(true);
+    setCheckoutFeedback(null);
+
     try {
-      const orderItems = cart.map(item => ({
-        batchId: item.id, 
-        quantityKg: item.qty
+      const orderItems = cart.map((item) => ({
+        productId: item.id,
+        quantity: item.qty,
       }));
 
-      const orderRes = await api.post('/orders', {
+      // 1. Create Order in Database
+      const orderRes = await api.post("/orders", {
         orderType: "RETAIL",
         deliveryAddress: deliveryAddress || "Store Pickup",
-        customerName: customerName || "Guest Customer",
-        customerEmail: customerEmail,
-        customerPhone: phoneNumber,
-        items: orderItems
+        customerName: customerName || "Online Customer",
+        customerEmail: customerEmail || null,
+        customerPhone: cleanPhone,
+        items: orderItems,
       });
 
-      await api.post('/payments/checkout', {
-        orderId: orderRes.data.id,
-        phoneNumber: phoneNumber
+      const orderData = orderRes.data;
+
+      // 2. Trigger M-Pesa STK Push
+      await api.post("/payments/checkout", {
+        orderId: orderData.id,
+        phoneNumber: cleanPhone,
       });
 
-      alert("STK Push sent successfully! Please check your phone to enter your M-Pesa PIN.");
-      setCart([]);
-      setShowCart(false);
-      setCheckoutStep("cart");
-      setCustomerName("");
-      setCustomerEmail("");
-      setDeliveryAddress("");
-      setPhoneNumber("");
+      setCheckoutFeedback({
+        type: "success",
+        message: `Order #${orderData.orderNumber} placed! Please check your phone for the M-Pesa PIN prompt to finalize payment.`,
+      });
+
+      setTimeout(() => {
+        setCart([]);
+        setShowCart(false);
+        setCheckoutStep("cart");
+        setCustomerName("");
+        setCustomerEmail("");
+        setDeliveryAddress("");
+        setPhoneNumber("");
+        setCheckoutFeedback(null);
+        loadProducts(); // refresh available stock
+      }, 4000);
     } catch (error: any) {
-      console.error(error);
-      alert(error.response?.data?.error || "Checkout failed. Ensure you are buying live stock.");
+      console.error("[Checkout] Error processing order:", error);
+      const errMsg = error.response?.data?.error || error.message || "Failed to process checkout. Please try again.";
+      setCheckoutFeedback({ type: "error", message: errMsg });
     } finally {
       setIsCheckingOut(false);
     }
@@ -161,7 +213,7 @@ export function Store() {
             Aquafarm Fish Store
           </h1>
           <p className="text-teal-200 text-lg max-w-xl mx-auto">
-            Fresh fish, certified fingerlings, quality feeds, and professional fishing equipment — all in one place.
+            Fresh fish, certified fingerlings, quality feeds, and professional fishing equipment — live from our farm.
           </p>
         </div>
       </section>
@@ -190,22 +242,29 @@ export function Store() {
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
-              placeholder="Search products..."
+              placeholder="Search live products..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-teal-500 transition-colors"
             />
           </div>
-          
+
           <div className="flex items-center gap-3">
             <button
+              onClick={loadProducts}
+              title="Refresh Catalog"
+              className="p-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+            >
+              <RefreshCw size={15} className={isLoading ? "animate-spin" : ""} />
+            </button>
+            <button
               onClick={() => { setCheckoutStep("cart"); setShowCart(true); }}
-              className="relative flex items-center gap-2 bg-teal-700 hover:bg-teal-600 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm"
+              className="relative flex items-center gap-2 bg-teal-700 hover:bg-teal-600 text-white font-semibold px-5 py-2.5 rounded-xl transition-colors text-sm shadow-sm"
             >
               <ShoppingCart size={16} />
               View Cart
               {cartCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center animate-bounce">
                   {cartCount}
                 </span>
               )}
@@ -215,7 +274,7 @@ export function Store() {
 
         {/* Categories */}
         <div className="flex gap-2 overflow-x-auto pb-2 mb-6">
-          {categories.map(cat => (
+          {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
@@ -230,69 +289,99 @@ export function Store() {
           ))}
         </div>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {filtered.map(product => (
-            <div key={product.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl transition-all group">
-              <div className="relative h-44 overflow-hidden">
-                <ImageWithFallback
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <span className={`absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full ${
-                  product.stock === "In Stock" || product.stock.includes("Available") ? "bg-green-600 text-white" :
-                  product.stock === "Limited" ? "bg-amber-600 text-white" : "bg-red-600 text-white"
-                }`}>
-                  {product.stock}
-                </span>
-                {product.tag && (
-                  <span className="absolute top-2 left-2 bg-teal-700 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                    {product.tag}
-                  </span>
-                )}
-              </div>
-              <div className="p-4">
-                <h3 className="text-gray-900 font-semibold text-sm leading-tight">{product.name}</h3>
-                <div className="flex items-center gap-1 my-1">
-                  {Array.from({ length: 5 }).map((_, j) => (
-                    <Star key={j} size={11} className={j < Math.round(product.rating) ? "text-amber-400 fill-amber-400" : "text-gray-200 fill-gray-200"} />
-                  ))}
-                  <span className="text-gray-400 text-xs">({product.reviews})</span>
+        {/* Loading Skeletons */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+              <div key={n} className="bg-white rounded-2xl border border-gray-100 p-4 animate-pulse space-y-3">
+                <div className="bg-gray-200 h-44 rounded-xl" />
+                <div className="bg-gray-200 h-4 rounded w-3/4" />
+                <div className="bg-gray-200 h-3 rounded w-1/2" />
+                <div className="flex justify-between items-center pt-2">
+                  <div className="bg-gray-200 h-5 rounded w-1/3" />
+                  <div className="bg-gray-200 h-8 rounded w-1/4" />
                 </div>
-                <p className="text-gray-500 text-xs mb-3 line-clamp-2">{product.desc}</p>
-                <div className="flex items-center justify-between">
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Products Grid */
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filtered.map((product) => {
+              const isOutOfStock = product.stock <= 0;
+              return (
+                <div key={product.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-xl transition-all group flex flex-col justify-between">
                   <div>
-                    <span className="text-teal-700 font-bold">KES {product.price.toLocaleString()}</span>
-                    <span className="text-gray-400 text-xs ml-1">{product.unit}</span>
+                    <div className="relative h-44 overflow-hidden bg-gray-100">
+                      <ImageWithFallback
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <span className={`absolute top-2 right-2 text-xs font-bold px-2 py-0.5 rounded-full ${
+                        isOutOfStock
+                          ? "bg-red-600 text-white"
+                          : product.stock < 20
+                          ? "bg-amber-600 text-white"
+                          : "bg-green-600 text-white"
+                      }`}>
+                        {isOutOfStock ? "Out of Stock" : `${product.stock} ${product.unit} Available`}
+                      </span>
+                    </div>
+
+                    <div className="p-4">
+                      <h3 className="text-gray-900 font-semibold text-sm leading-tight">{product.name}</h3>
+                      <div className="flex items-center gap-1 my-1">
+                        {Array.from({ length: 5 }).map((_, j) => (
+                          <Star key={j} size={11} className={j < Math.round(product.rating) ? "text-amber-400 fill-amber-400" : "text-gray-200 fill-gray-200"} />
+                        ))}
+                        <span className="text-gray-400 text-xs">({product.reviews})</span>
+                      </div>
+                      <p className="text-gray-500 text-xs mb-3 line-clamp-2">{product.desc}</p>
+                    </div>
                   </div>
-                  
-                  <button
-                    onClick={() => addToCart(product)}
-                    className={`${
-                      addedItemId === product.id 
-                        ? 'bg-green-600 hover:bg-green-700' 
-                        : 'bg-teal-700 hover:bg-teal-600'
-                    } text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 w-24 justify-center`}
-                  >
-                    {addedItemId === product.id ? (
-                      "Added!"
-                    ) : (
-                      <>
-                        <ShoppingCart size={12} /> Add
-                      </>
-                    )}
-                  </button>
-                  
+
+                  <div className="p-4 pt-0">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-teal-700 font-bold">KES {product.price.toLocaleString()}</span>
+                        <span className="text-gray-400 text-xs ml-1">{product.unit}</span>
+                      </div>
+
+                      <button
+                        onClick={() => addToCart(product)}
+                        disabled={isOutOfStock}
+                        className={`${
+                          isOutOfStock
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : addedItemId === product.id
+                            ? "bg-green-600 hover:bg-green-700 text-white"
+                            : "bg-teal-700 hover:bg-teal-600 text-white"
+                        } text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 w-24 justify-center shadow-sm`}
+                      >
+                        {isOutOfStock ? (
+                          "Unavailable"
+                        ) : addedItemId === product.id ? (
+                          "Added!"
+                        ) : (
+                          <>
+                            <ShoppingCart size={12} /> Add
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        {filtered.length === 0 && (
-          <div className="text-center py-12 text-gray-500">
+              );
+            })}
+          </div>
+        )}
+
+        {!isLoading && filtered.length === 0 && (
+          <div className="text-center py-16 text-gray-500 bg-gray-50 rounded-2xl border border-gray-100 mt-4">
             <Fish size={48} className="mx-auto mb-3 text-gray-300" />
-            <p>No products found. Try a different search or category.</p>
+            <p className="font-semibold text-gray-700">No products found in this category.</p>
+            <p className="text-xs text-gray-400 mt-1">Try switching categories or searching for another term.</p>
           </div>
         )}
       </div>
@@ -300,7 +389,7 @@ export function Store() {
       {/* Cart Drawer / Step View */}
       {showCart && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowCart(false)} />
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setShowCart(false)} />
           <div className="relative bg-white w-full max-w-md h-full flex flex-col shadow-2xl">
             
             {/* Drawer Header */}
@@ -313,7 +402,7 @@ export function Store() {
                 )}
                 <h2 className="font-bold text-lg text-gray-900 flex items-center gap-2">
                   <ShoppingCart size={18} className="text-teal-700" /> 
-                  {checkoutStep === "cart" ? `Shopping Cart (${cartCount})` : "Checkout & Payment"}
+                  {checkoutStep === "cart" ? `Shopping Cart (${cartCount})` : "Checkout & M-Pesa"}
                 </h2>
               </div>
               <button onClick={() => setShowCart(false)} className="text-gray-500 hover:text-gray-700 transition-colors">
@@ -329,10 +418,10 @@ export function Store() {
                     <div className="text-center py-16 text-gray-400">
                       <ShoppingCart size={48} className="mx-auto mb-3 text-gray-300" />
                       <p className="font-medium text-gray-600">Your cart is empty</p>
-                      <p className="text-xs text-gray-400 mt-1">Add items from the store to begin</p>
+                      <p className="text-xs text-gray-400 mt-1">Add live products from the store to begin</p>
                     </div>
                   ) : (
-                    cart.map(item => (
+                    cart.map((item) => (
                       <div key={item.id} className="flex items-center justify-between gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
                         <div className="flex-1">
                           <p className="text-gray-900 font-medium text-sm">{item.name}</p>
@@ -384,22 +473,31 @@ export function Store() {
                     </button>
                   </div>
 
+                  {checkoutFeedback && (
+                    <div className={`p-3.5 rounded-xl text-xs flex items-start gap-2.5 ${
+                      checkoutFeedback.type === "success" ? "bg-green-100 text-green-800 border border-green-200" : "bg-red-100 text-red-800 border border-red-200"
+                    }`}>
+                      {checkoutFeedback.type === "success" ? <CheckCircle2 size={16} className="flex-shrink-0 mt-0.5" /> : <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />}
+                      <span>{checkoutFeedback.message}</span>
+                    </div>
+                  )}
+
                   <div className="space-y-3">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 mb-1">Full Name</label>
                       <input 
                         type="text" 
-                        placeholder="e.g. John Doe" 
+                        placeholder="e.g. John Mwangi" 
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-teal-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">Email (For PDF Receipt)</label>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Email (For Automated PDF Receipt)</label>
                       <input 
                         type="email" 
-                        placeholder="e.g. john@example.com" 
+                        placeholder="e.g. customer@example.com" 
                         value={customerEmail}
                         onChange={(e) => setCustomerEmail(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-teal-500"
@@ -416,14 +514,15 @@ export function Store() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-gray-700 mb-1">M-Pesa Phone Number</label>
+                      <label className="block text-xs font-bold text-gray-700 mb-1">Safaricom M-Pesa Phone Number</label>
                       <input 
-                        type="text" 
-                        placeholder="2547XXXXXXXX" 
+                        type="tel" 
+                        placeholder="0712345678 or 254712345678" 
                         value={phoneNumber}
                         onChange={(e) => setPhoneNumber(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-teal-500"
                       />
+                      <p className="text-[11px] text-gray-500 mt-1">An instant STK Push prompt will appear on your phone.</p>
                     </div>
                   </div>
                 </div>
@@ -431,18 +530,24 @@ export function Store() {
                 <div className="p-5 border-t bg-gray-50 space-y-3">
                   <button
                     onClick={handleMpesaCheckout}
-                    disabled={isCheckingOut}
+                    disabled={isCheckingOut || cart.length === 0}
                     className="w-full flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 disabled:bg-teal-300 text-white font-bold py-3 rounded-xl transition-colors shadow-sm"
                   >
-                    {isCheckingOut ? "Processing STK Push..." : `Pay KES ${cartTotal.toLocaleString()} with M-Pesa`}
+                    {isCheckingOut ? (
+                      <>
+                        <RefreshCw size={15} className="animate-spin" /> Processing STK Push...
+                      </>
+                    ) : (
+                      `Pay KES ${cartTotal.toLocaleString()} with M-Pesa`
+                    )}
                   </button>
 
                   {/* WhatsApp Order Fallback */}
                   <a
-                    href={`https://wa.me/254700000000?text=Hello Aquafarm! I'd like to order: ${cart.map(i => `${i.qty}x ${i.name}`).join(", ")}. Total: KES ${cartTotal.toLocaleString()}`}
+                    href={`https://wa.me/254712345678?text=Hello Aquafarm! I would like to order: ${cart.map((i) => `${i.qty}x ${i.name}`).join(", ")}. Total: KES ${cartTotal.toLocaleString()}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl transition-colors text-sm"
+                    className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl transition-colors text-sm shadow-sm"
                   >
                     <Phone size={15} />
                     Order via WhatsApp
