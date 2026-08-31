@@ -1,18 +1,43 @@
 /**
- * Mock API Service — Aquafarm Fisheries
+ * API Service — Aquafarm Fisheries
  * ──────────────────────────────────────
- * Simulates an Express.js backend with realistic latency.
- * In production, replace each function's body with a real fetch() call to your API.
- *
- * Base URL would be: https://api.aquafarmfisheries.co.ke/v1
+ * Full Integration with Express & Prisma Backend + Auth JWT Interceptor
  */
 
-const BASE_URL = "https://api.aquafarmfisheries.co.ke/v1"; // production endpoint placeholder
+const API_BASE = "http://localhost:5000/api";
 
 type ApiResponse<T> = { data: T; success: boolean; message?: string };
 
 async function simulateDelay(ms = 600): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * Authenticated Fetch Wrapper
+ * - Automatically injects JWT Bearer token from localStorage
+ * - Intercepts 401 Unauthorized responses to trigger session invalidation
+ */
+export async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  const token = localStorage.getItem("aquafarm-token");
+  const headers = new Headers(options.headers || {});
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const config: RequestInit = {
+    ...options,
+    headers,
+  };
+
+  const response = await fetch(url, config);
+
+  if (response.status === 401) {
+    console.warn("[API] 401 Unauthorized received. Dispathing auth:expired event.");
+    window.dispatchEvent(new CustomEvent("auth:expired"));
+  }
+
+  return response;
 }
 
 // ─── Contact Form ─────────────────────────────────────────────────────────────
@@ -28,7 +53,6 @@ export async function submitContactForm(
   payload: ContactPayload
 ): Promise<ApiResponse<{ ticketId: string }>> {
   await simulateDelay(800);
-  // In production: return fetch(`${BASE_URL}/contact`, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json());
   console.log("[API] Contact form submitted:", payload);
   return {
     success: true,
@@ -52,7 +76,6 @@ export async function submitVisitBooking(
   payload: BookingPayload
 ): Promise<ApiResponse<{ bookingRef: string }>> {
   await simulateDelay(900);
-  // In production: return fetch(`${BASE_URL}/bookings`, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json());
   console.log("[API] Visit booking submitted:", payload);
   const ref = `BK-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000) + 1000}`;
   return {
@@ -84,7 +107,6 @@ export async function placeOrder(
   payload: OrderPayload
 ): Promise<ApiResponse<{ orderId: string; mpesaPrompt?: boolean }>> {
   await simulateDelay(1100);
-  // In production: return fetch(`${BASE_URL}/orders`, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json());
   console.log("[API] Order placed:", payload);
   const orderId = `ORD-${Date.now()}`;
   return {
@@ -94,91 +116,11 @@ export async function placeOrder(
   };
 }
 
-// ─── Dashboard Data ───────────────────────────────────────────────────────────
-export async function getDashboardStats(): Promise<
-  ApiResponse<{
-    totalRevenueMonth: number;
-    fishSoldKg: number;
-    activePonds: number;
-    pendingOrders: number;
-    revenueGrowth: number;
-    salesGrowth: number;
-  }>
-> {
-  await simulateDelay(500);
-  // In production: return fetch(`${BASE_URL}/dashboard/stats`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json());
-  return {
-    success: true,
-    data: {
-      totalRevenueMonth: 540000,
-      fishSoldKg: 1680,
-      activePonds: 31,
-      pendingOrders: 7,
-      revenueGrowth: 12.4,
-      salesGrowth: 8.2,
-    },
-  };
-}
-
-export async function getFishStock(): Promise<ApiResponse<any[]>> {
-  await simulateDelay(500);
-  // In production: return fetch(`${BASE_URL}/stock`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json());
-  return {
-    success: true,
-    data: [
-      { id: "TS-001", species: "Nile Tilapia", pondCount: 12, totalKg: 8400, avgWeight: "450g", status: "Excellent", healthStatus: "Healthy", daysToHarvest: 18 },
-      { id: "CS-001", species: "African Catfish", pondCount: 8, totalKg: 5600, avgWeight: "720g", status: "Good", healthStatus: "Healthy", daysToHarvest: 25 },
-      { id: "RT-001", species: "Rainbow Trout", pondCount: 4, totalKg: 2100, avgWeight: "580g", status: "Monitor", healthStatus: "Under Watch", daysToHarvest: 35 },
-    ],
-  };
-}
-
-export async function getSalesRecords(): Promise<ApiResponse<any[]>> {
-  await simulateDelay(600);
-  // In production: return fetch(`${BASE_URL}/sales`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json());
-  return { success: true, data: [] };
-}
-
-// ─── Newsletter ───────────────────────────────────────────────────────────────
-export async function subscribeNewsletter(
-  email: string
-): Promise<ApiResponse<null>> {
-  await simulateDelay(700);
-  // In production: return fetch(`${BASE_URL}/newsletter/subscribe`, { method: 'POST', body: JSON.stringify({ email }) }).then(r => r.json());
-  console.log("[API] Newsletter subscription:", email);
-  return { success: true, data: null, message: "Successfully subscribed to the newsletter!" };
-}
-
-// ─── Job Application ──────────────────────────────────────────────────────────
-export interface JobApplicationPayload {
-  name: string;
-  email: string;
-  phone: string;
-  position: string;
-  coverLetter: string;
-  cvUrl?: string;
-}
-
-export async function submitJobApplication(
-  payload: JobApplicationPayload
-): Promise<ApiResponse<{ applicationId: string }>> {
-  await simulateDelay(1000);
-  // In production: return fetch(`${BASE_URL}/careers/apply`, { method: 'POST', body: JSON.stringify(payload) }).then(r => r.json());
-  console.log("[API] Job application:", payload);
-  return {
-    success: true,
-    data: { applicationId: `APP-${Date.now()}` },
-    message: "Application received! We will review and contact you within 5 business days.",
-  };
-}
-
-
-const API_BASE = "http://localhost:5000/api"; 
-
+// ─── Dashboard Products & Inventory API ───────────────────────────────────────
 
 export async function fetchProducts(): Promise<any[]> {
   try {
-    const response = await fetch(`${API_BASE}/products`);
+    const response = await authFetch(`${API_BASE}/products`);
     if (!response.ok) throw new Error("Failed to fetch products");
     return await response.json();
   } catch (error) {
@@ -187,39 +129,41 @@ export async function fetchProducts(): Promise<any[]> {
   }
 }
 
-
 export async function createLiveProduct(formData: FormData): Promise<any> {
   try {
-    const response = await fetch(`${API_BASE}/products`, {
-      method: 'POST',
-      body: formData, // Sending multipart/form-data for the image buffer
+    const response = await authFetch(`${API_BASE}/products`, {
+      method: "POST",
+      body: formData,
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Failed to create product");
     }
-    return await response.json();
+    const result = await response.json();
+    logAuditEvent("Created Product", { name: formData.get("name"), category: formData.get("category") });
+    return result;
   } catch (error) {
     console.error("[API] Error creating product:", error);
     throw error;
   }
 }
 
-
 export async function uploadBulkImportDocument(file: File): Promise<any> {
   try {
     const formData = new FormData();
     formData.append("document", file);
 
-    const response = await fetch(`${API_BASE}/imports/bulk`, {
-      method: 'POST',
+    const response = await authFetch(`${API_BASE}/imports/bulk`, {
+      method: "POST",
       body: formData,
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Failed to process document");
     }
-    return await response.json();
+    const result = await response.json();
+    logAuditEvent("Uploaded Bulk Import Document", { filename: file.name, size: file.size });
+    return result;
   } catch (error) {
     console.error("[API] Error processing bulk import:", error);
     throw error;
@@ -228,15 +172,17 @@ export async function uploadBulkImportDocument(file: File): Promise<any> {
 
 export async function updateLiveProduct(id: string, formData: FormData): Promise<any> {
   try {
-    const response = await fetch(`${API_BASE}/products/${id}`, {
-      method: 'PUT',
+    const response = await authFetch(`${API_BASE}/products/${id}`, {
+      method: "PUT",
       body: formData,
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Failed to update product");
     }
-    return await response.json();
+    const result = await response.json();
+    logAuditEvent("Updated Product", { productId: id, name: formData.get("name") });
+    return result;
   } catch (error) {
     console.error("[API] Error updating product:", error);
     throw error;
@@ -245,22 +191,25 @@ export async function updateLiveProduct(id: string, formData: FormData): Promise
 
 export async function deleteLiveProduct(id: string): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE}/products/${id}`, {
-      method: 'DELETE',
+    const response = await authFetch(`${API_BASE}/products/${id}`, {
+      method: "DELETE",
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Failed to delete product");
     }
+    logAuditEvent("Deleted Product", { productId: id });
   } catch (error) {
     console.error("[API] Error deleting product:", error);
     throw error;
   }
 }
 
+// ─── Fish Batches & Stock API ─────────────────────────────────────────────────
+
 export async function fetchFishBatches(): Promise<any[]> {
   try {
-    const response = await fetch(`${API_BASE}/stock/batches`);
+    const response = await authFetch(`${API_BASE}/stock/batches`);
     if (!response.ok) throw new Error("Failed to fetch fish batches");
     return await response.json();
   } catch (error) {
@@ -271,16 +220,18 @@ export async function fetchFishBatches(): Promise<any[]> {
 
 export async function createFishBatch(payload: any): Promise<any> {
   try {
-    const response = await fetch(`${API_BASE}/stock/batches`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await authFetch(`${API_BASE}/stock/batches`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Failed to create batch");
     }
-    return await response.json();
+    const result = await response.json();
+    logAuditEvent("Created Fish Batch", { batchCode: payload.batchCode, species: payload.species });
+    return result;
   } catch (error) {
     console.error("[API] Error creating batch:", error);
     throw error;
@@ -289,23 +240,25 @@ export async function createFishBatch(payload: any): Promise<any> {
 
 export async function deleteFishBatch(id: string): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE}/stock/batches/${id}`, {
-      method: 'DELETE',
+    const response = await authFetch(`${API_BASE}/stock/batches/${id}`, {
+      method: "DELETE",
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Failed to delete batch");
     }
+    logAuditEvent("Deleted Fish Batch", { batchId: id });
   } catch (error) {
     console.error("[API] Error deleting batch:", error);
     throw error;
   }
 }
 
+// ─── Sales Records API ────────────────────────────────────────────────────────
 
 export async function fetchSalesRecords(): Promise<any[]> {
   try {
-    const response = await fetch(`${API_BASE}/sales`);
+    const response = await authFetch(`${API_BASE}/sales`);
     if (!response.ok) throw new Error("Failed to fetch sales records");
     return await response.json();
   } catch (error) {
@@ -316,16 +269,18 @@ export async function fetchSalesRecords(): Promise<any[]> {
 
 export async function createSaleRecord(payload: any): Promise<any> {
   try {
-    const response = await fetch(`${API_BASE}/sales`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await authFetch(`${API_BASE}/sales`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Failed to create sale");
     }
-    return await response.json();
+    const result = await response.json();
+    logAuditEvent("Recorded New Sale", { orderNumber: result.orderNumber, amount: result.totalAmount, customer: payload.customerName });
+    return result;
   } catch (error) {
     console.error("[API] Error creating sale:", error);
     throw error;
@@ -334,16 +289,18 @@ export async function createSaleRecord(payload: any): Promise<any> {
 
 export async function updateSaleRecord(id: string, payload: any): Promise<any> {
   try {
-    const response = await fetch(`${API_BASE}/sales/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await authFetch(`${API_BASE}/sales/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Failed to update sale");
     }
-    return await response.json();
+    const result = await response.json();
+    logAuditEvent("Updated Sale Status", { orderNumber: id, updates: payload });
+    return result;
   } catch (error) {
     console.error("[API] Error updating sale:", error);
     throw error;
@@ -352,24 +309,126 @@ export async function updateSaleRecord(id: string, payload: any): Promise<any> {
 
 export async function deleteSaleRecord(id: string): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE}/sales/${id}`, {
-      method: 'DELETE',
+    const response = await authFetch(`${API_BASE}/sales/${id}`, {
+      method: "DELETE",
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Failed to delete sale");
     }
+    logAuditEvent("Deleted Sale (Restored Stock)", { orderNumber: id });
   } catch (error) {
     console.error("[API] Error deleting sale:", error);
     throw error;
   }
 }
 
-// ─── Phase 9: Suppliers CRM API ───────────────────────────────────────────────
+// ─── Phase 12: M-Pesa Payment Integration API ─────────────────────────────────
+
+export async function initiateMpesaPayment(orderId: string, phoneNumber: string): Promise<{ checkoutRequestId: string; message: string; orderNumber: string }> {
+  try {
+    const response = await authFetch(`${API_BASE}/payments/checkout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId, phoneNumber }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to initiate M-Pesa STK Push");
+    }
+
+    const data = await response.json();
+    logAuditEvent("Initiated M-Pesa STK Push", { orderId, phoneNumber, checkoutRequestId: data.checkoutRequestId });
+    return data;
+  } catch (error) {
+    console.error("[API] Error initiating M-Pesa payment:", error);
+    throw error;
+  }
+}
+
+export async function checkPaymentStatus(checkoutRequestId: string): Promise<any> {
+  try {
+    const response = await authFetch(`${API_BASE}/payments/status/${checkoutRequestId}`);
+    if (!response.ok) throw new Error("Payment status check failed");
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error checking payment status:", error);
+    throw error;
+  }
+}
+
+// ─── Phase 13: Dynamic Alerts & Audit Logging API ─────────────────────────────
+
+export async function fetchAlerts(): Promise<any[]> {
+  try {
+    const response = await authFetch(`${API_BASE}/alerts`);
+    if (!response.ok) throw new Error("Failed to fetch active alerts");
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error fetching alerts:", error);
+    return [];
+  }
+}
+
+export async function markAlertRead(id: string): Promise<any> {
+  try {
+    const response = await authFetch(`${API_BASE}/alerts/${id}/read`, {
+      method: "PATCH",
+    });
+    if (!response.ok) throw new Error("Failed to mark alert as read");
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error marking alert as read:", error);
+    throw error;
+  }
+}
+
+export async function triggerAlertScan(): Promise<any> {
+  try {
+    const response = await authFetch(`${API_BASE}/alerts/scan`, {
+      method: "POST",
+    });
+    if (!response.ok) throw new Error("Failed to trigger alert scan");
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error triggering alert scan:", error);
+    throw error;
+  }
+}
+
+export async function fetchAuditLogs(): Promise<any[]> {
+  try {
+    const response = await authFetch(`${API_BASE}/audit-logs`);
+    if (!response.ok) throw new Error("Failed to fetch audit logs");
+    return await response.json();
+  } catch (error) {
+    console.error("[API] Error fetching audit logs:", error);
+    return [];
+  }
+}
+
+export async function logAuditEvent(action: string, details?: any): Promise<void> {
+  try {
+    const token = localStorage.getItem("aquafarm-token");
+    if (!token) return; // Skip if unauthenticated
+
+    await authFetch(`${API_BASE}/audit-logs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, details }),
+    });
+  } catch (err) {
+    // Non-blocking: audit failure should not break user flow
+    console.warn("[API] Failed to record audit log:", err);
+  }
+}
+
+// ─── Suppliers CRM API ────────────────────────────────────────────────────────
 
 export async function fetchSuppliers(): Promise<any[]> {
   try {
-    const response = await fetch(`${API_BASE}/suppliers`);
+    const response = await authFetch(`${API_BASE}/suppliers`);
     if (!response.ok) throw new Error("Failed to fetch suppliers");
     return await response.json();
   } catch (error) {
@@ -380,16 +439,18 @@ export async function fetchSuppliers(): Promise<any[]> {
 
 export async function createSupplier(payload: any): Promise<any> {
   try {
-    const response = await fetch(`${API_BASE}/suppliers`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await authFetch(`${API_BASE}/suppliers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Failed to create supplier");
     }
-    return await response.json();
+    const result = await response.json();
+    logAuditEvent("Created Supplier", { name: payload.name, category: payload.category });
+    return result;
   } catch (error) {
     console.error("[API] Error creating supplier:", error);
     throw error;
@@ -398,16 +459,18 @@ export async function createSupplier(payload: any): Promise<any> {
 
 export async function updateSupplier(id: string, payload: any): Promise<any> {
   try {
-    const response = await fetch(`${API_BASE}/suppliers/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+    const response = await authFetch(`${API_BASE}/suppliers/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Failed to update supplier");
     }
-    return await response.json();
+    const result = await response.json();
+    logAuditEvent("Updated Supplier", { supplierId: id, name: payload.name });
+    return result;
   } catch (error) {
     console.error("[API] Error updating supplier:", error);
     throw error;
@@ -416,24 +479,25 @@ export async function updateSupplier(id: string, payload: any): Promise<any> {
 
 export async function deleteSupplier(id: string): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE}/suppliers/${id}`, {
-      method: 'DELETE',
+    const response = await authFetch(`${API_BASE}/suppliers/${id}`, {
+      method: "DELETE",
     });
     if (!response.ok) {
-      const err = await response.json();
+      const err = await response.json().catch(() => ({}));
       throw new Error(err.error || "Failed to delete supplier");
     }
+    logAuditEvent("Deleted Supplier", { supplierId: id });
   } catch (error) {
     console.error("[API] Error deleting supplier:", error);
     throw error;
   }
 }
 
-// ─── Phase 10: Live Analytics API ─────────────────────────────────────────────
+// ─── Analytics API ────────────────────────────────────────────────────────────
 
 export async function fetchOverviewAnalytics(): Promise<any> {
   try {
-    const response = await fetch(`${API_BASE}/analytics/overview`);
+    const response = await authFetch(`${API_BASE}/analytics/overview`);
     if (!response.ok) throw new Error("Failed to fetch analytics");
     return await response.json();
   } catch (error) {
@@ -442,29 +506,27 @@ export async function fetchOverviewAnalytics(): Promise<any> {
   }
 }
 
-// ─── Phase 11: Reports & PDF Generation API ───────────────────────────────────
+// ─── Reports & PDF Generation API ────────────────────────────────────────────
 
 export async function downloadReportPdf(endpoint: string, defaultFilename = "aquafarm-report.pdf"): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE}/reports/${endpoint}`);
+    const response = await authFetch(`${API_BASE}/reports/${endpoint}`);
     if (!response.ok) {
       throw new Error(`Failed to download report (${response.statusText})`);
     }
 
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = defaultFilename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+    logAuditEvent("Downloaded PDF Report", { report: endpoint });
   } catch (error) {
     console.error("[API] Error downloading PDF report:", error);
     throw error;
   }
 }
-
-
-
