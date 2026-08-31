@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, RefreshCw, Calendar, Fish, X, CheckCircle2, AlertCircle } from "lucide-react";
 import { fetchFishBatches, createFishBatch, deleteFishBatch } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 interface DashboardStockTabProps {
   isDark: boolean;
@@ -16,6 +17,9 @@ interface DashboardStockTabProps {
 export default function DashboardStockTab({
   isDark, cardBg, cardBorder, textPrimary, textMuted, textSub, divideColor, tableHover
 }: DashboardStockTabProps) {
+  const { hasRole } = useAuth();
+  const isAdmin = hasRole(["ADMIN", "admin"]);
+
   const [batches, setBatches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -67,13 +71,17 @@ export default function DashboardStockTab({
 
   const handleDeleteSubmit = async () => {
     if (!activeBatchId) return;
+    if (!isAdmin) {
+      alert("Access Denied: Only ADMINs can delete fish batches.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       await deleteFishBatch(activeBatchId);
       setActiveModal("none");
       loadBatches();
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      alert(error.message || "Failed to delete fish batch");
     } finally {
       setIsSubmitting(false);
     }
@@ -102,7 +110,7 @@ export default function DashboardStockTab({
     const s = batch.species;
     if (!acc[s]) acc[s] = { totalKg: 0, ponds: 0, color: getSpeciesColor(s) };
     acc[s].totalKg += batch.totalKg;
-    acc[s].ponds += batch.pondCount;
+    acc[s].ponds += batch.pondCount || 1;
     return acc;
   }, {} as Record<string, any>);
 
@@ -130,7 +138,7 @@ export default function DashboardStockTab({
             </div>
             <p className={`font-semibold text-sm mb-1 ${textPrimary}`}>{species}</p>
             <p className="font-bold text-xl" style={{ color: data.color }}>{(data.totalKg / 1000).toFixed(1)}T</p>
-            <p className={`text-xs ${textMuted}`}>{data.ponds} ponds connected</p>
+            <p className={`text-xs ${textMuted}`}>{data.ponds} pond(s) active</p>
           </div>
         ))}
         {Object.keys(speciesSummary).length === 0 && !isLoading && (
@@ -205,13 +213,15 @@ export default function DashboardStockTab({
                     <td className={`px-4 py-3 text-sm ${textSub}`}>{batch.daysToHarvest ? `${batch.daysToHarvest} days` : "N/A"}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <button className={`p-1.5 rounded-lg transition-colors ${isDark ? "text-blue-400 hover:bg-blue-900/30" : "text-blue-600 hover:bg-blue-50"}`}><Edit size={13} /></button>
-                        <button 
-                          onClick={() => { setActiveBatchId(batch.id); setActiveModal("delete"); }}
-                          className={`p-1.5 rounded-lg transition-colors ${isDark ? "text-red-400 hover:bg-red-900/30" : "text-red-500 hover:bg-red-50"}`}
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        {isAdmin && (
+                          <button 
+                            title="Delete Batch (Admin Only)"
+                            onClick={() => { setActiveBatchId(batch.id); setActiveModal("delete"); }}
+                            className={`p-1.5 rounded-lg transition-colors ${isDark ? "text-red-400 hover:bg-red-900/30" : "text-red-500 hover:bg-red-50"}`}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
