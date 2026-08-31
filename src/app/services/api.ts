@@ -4,7 +4,7 @@
  * Full Integration with Express & Prisma Backend + Auth JWT Interceptor
  */
 
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 type ApiResponse<T> = { data: T; success: boolean; message?: string };
 
