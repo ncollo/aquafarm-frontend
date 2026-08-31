@@ -12,6 +12,8 @@ import {
     Package,
     RefreshCw,
     TrendingUp,
+    Check,
+    Radio,
 } from "lucide-react";
 import {
     Area,
@@ -30,7 +32,7 @@ import {
     XAxis,
     YAxis,
 } from "recharts";
-import { fetchOverviewAnalytics } from "../../services/api";
+import { fetchOverviewAnalytics, fetchAlerts, markAlertRead, triggerAlertScan } from "../../services/api";
 
 const defaultSalesData = [
     { month: "Oct", tilapia: 180, catfish: 95, trout: 40, carp: 30 },
@@ -177,23 +179,51 @@ export default function DashboardOverviewTab({
     textSub,
 }: DashboardOverviewTabProps) {
     const [analytics, setAnalytics] = useState<any>(null);
+    const [alerts, setAlerts] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [isScanning, setIsScanning] = useState(false);
 
-    const loadAnalytics = async () => {
+    const loadData = async () => {
         setIsLoading(true);
         try {
-            const data = await fetchOverviewAnalytics();
-            if (data) setAnalytics(data);
+            const [analyticsData, alertsData] = await Promise.all([
+                fetchOverviewAnalytics(),
+                fetchAlerts(),
+            ]);
+            if (analyticsData) setAnalytics(analyticsData);
+            if (alertsData) setAlerts(alertsData);
         } catch (e) {
-            console.error("Failed to load live analytics", e);
+            console.error("Failed to load live overview data", e);
         } finally {
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        loadAnalytics();
+        loadData();
     }, []);
+
+    const handleDismissAlert = async (id: string) => {
+        try {
+            await markAlertRead(id);
+            setAlerts((prev) => prev.filter((a) => a.id !== id));
+        } catch (err) {
+            console.error("Failed to dismiss alert:", err);
+        }
+    };
+
+    const handleManualScan = async () => {
+        setIsScanning(true);
+        try {
+            await triggerAlertScan();
+            const freshAlerts = await fetchAlerts();
+            setAlerts(freshAlerts);
+        } catch (err) {
+            console.error("Scan error:", err);
+        } finally {
+            setIsScanning(false);
+        }
+    };
 
     const kpiRaw = analytics?.kpis;
     const revenueData = analytics?.revenueData || defaultRevenueData;
@@ -218,281 +248,231 @@ export default function DashboardOverviewTab({
             value: `${(kpiRaw?.fishSoldKg ?? 1680).toLocaleString()} kg`,
             change: `+${kpiRaw?.salesGrowth ?? 8.2}% vs last month`,
             up: true,
-            icon: Fish,
-            gradient: "bg-gradient-to-br from-blue-500 to-blue-700",
-            sparkData: salesData.map((d: any) => ({ v: (d.tilapia || 0) + (d.catfish || 0) })),
+            icon: Package,
+            gradient: "bg-gradient-to-br from-blue-600 to-blue-800",
+            sparkData: salesData.map((d: any) => ({ v: d.tilapia + d.catfish })),
         },
         {
             title: "Active Ponds",
-            value: `${kpiRaw?.activePonds ?? 31} / ${kpiRaw?.totalPonds ?? 32}`,
-            change: `${(kpiRaw?.totalPonds ?? 32) - (kpiRaw?.activePonds ?? 31)} under maintenance`,
+            value: `${kpiRaw?.activePonds ?? 31} / 36`,
+            change: "86% capacity utilized",
             up: null,
-            icon: Activity,
-            gradient: "bg-gradient-to-br from-emerald-500 to-emerald-700",
-            sparkData: null,
+            icon: Droplets,
+            gradient: "bg-gradient-to-br from-emerald-600 to-emerald-800",
         },
         {
-            title: "Pending Orders",
-            value: `${kpiRaw?.pendingOrders ?? 7} orders`,
-            change: "Requires dispatch/processing",
+            title: "Orders Pending Verification",
+            value: `${kpiRaw?.pendingOrders ?? 0}`,
+            change: "Requires fulfillment",
             up: false,
-            icon: Package,
-            gradient: "bg-gradient-to-br from-amber-500 to-amber-700",
-            sparkData: null,
+            icon: Activity,
+            gradient: "bg-gradient-to-br from-amber-600 to-amber-800",
         },
     ];
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            {/* Top Toolbar */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                    <h2 className={`font-bold text-xl ${textPrimary}`}>Farm Operations Analytics</h2>
-                    <p className={`text-sm ${textMuted}`}>Real-time PostgreSQL analytics & telemetry</p>
+                    <h2 className={`font-bold text-xl ${textPrimary}`}>Farm Overview & Telemetry</h2>
+                    <p className={`text-sm ${textMuted}`}>Live aquaculture telemetry, financials, and automated alert monitoring</p>
                 </div>
-                <button
-                    onClick={loadAnalytics}
-                    title="Refresh Live Analytics"
-                    className={`flex items-center gap-2 text-xs px-3 py-2 rounded-xl border transition-colors ${
-                        isDark ? "border-gray-700 text-gray-300 hover:bg-gray-700" : "border-gray-200 text-gray-700 hover:bg-gray-50"
-                    }`}
-                >
-                    <RefreshCw size={13} className={isLoading ? "animate-spin text-teal-500" : ""} />
-                    <span>Sync Live Data</span>
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleManualScan}
+                        disabled={isScanning}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                            isDark ? "bg-gray-800 border-gray-700 text-gray-200 hover:bg-gray-700" : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50 shadow-sm"
+                        }`}
+                    >
+                        <Radio size={14} className={`text-teal-500 ${isScanning ? "animate-pulse" : ""}`} />
+                        {isScanning ? "Scanning Farm..." : "Scan Telemetry"}
+                    </button>
+                    <button
+                        onClick={loadData}
+                        className={`p-2 rounded-xl border transition-all ${
+                            isDark ? "bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700" : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50 shadow-sm"
+                        }`}
+                    >
+                        <RefreshCw size={15} className={isLoading ? "animate-spin" : ""} />
+                    </button>
+                </div>
             </div>
 
+            {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                {kpiData.map((card, i) => (
-                    <KpiCard key={i} {...card} />
+                {kpiData.map((k, i) => (
+                    <KpiCard key={i} {...k} />
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <div className={`lg:col-span-3 rounded-2xl p-5 shadow-sm border ${cardBg} ${cardBorder}`}>
-                    <div className="flex items-center justify-between mb-4">
+            {/* Charts Row 1 */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className={`lg:col-span-2 rounded-2xl p-6 shadow-sm border ${cardBg} ${cardBorder}`}>
+                    <div className="flex items-center justify-between mb-6">
                         <div>
-                            <h3 className={`font-semibold ${textPrimary}`}>Revenue vs Target</h3>
-                            <p className={`text-xs ${textMuted}`}>6-month performance overview</p>
+                            <h3 className={`font-bold text-base ${textPrimary}`}>Revenue vs Target</h3>
+                            <p className={`text-xs ${textMuted}`}>Monthly financial performance (KES)</p>
                         </div>
-                        <div className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-lg font-medium ${isDark ? "bg-teal-900/40 text-teal-400" : "bg-teal-50 text-teal-700"}`}>
-                            <TrendingUp size={12} /> +{kpiRaw?.revenueGrowth ?? 12.4}% MoM
-                        </div>
+                        <span className="text-xs bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 font-semibold px-2.5 py-1 rounded-full">
+                            Target +8%
+                        </span>
                     </div>
-                    <ResponsiveContainer width="100%" height={230}>
-                        <AreaChart data={revenueData}>
-                            <defs>
-                                <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#0d9488" stopOpacity={0.4} />
-                                    <stop offset="100%" stopColor="#0d9488" stopOpacity={0} />
-                                </linearGradient>
-                                <linearGradient id="targetGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.3} />
-                                    <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
-                                </linearGradient>
-                                <linearGradient id="expGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#ef4444" stopOpacity={0.2} />
-                                    <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#374151" : "#f0f0f0"} />
-                            <XAxis dataKey="month" tick={{ fontSize: 11, fill: isDark ? "#9ca3af" : "#6b7280" }} />
-                            <YAxis tick={{ fontSize: 11, fill: isDark ? "#9ca3af" : "#6b7280" }} tickFormatter={(v) => `${v / 1000}k`} />
+                    <ResponsiveContainer width="100%" height={260}>
+                        <BarChart data={revenueData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#374151" : "#f3f4f6"} />
+                            <XAxis dataKey="month" stroke={isDark ? "#9ca3af" : "#6b7280"} fontSize={12} tickLine={false} />
+                            <YAxis stroke={isDark ? "#9ca3af" : "#6b7280"} fontSize={11} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
                             <Tooltip content={<CustomTooltip isDark={isDark} />} />
-                            <Legend wrapperStyle={{ fontSize: 11 }} />
-                            <Area type="monotone" dataKey="revenue" stroke="#0d9488" fill="url(#revGrad)" strokeWidth={2.5} name="Revenue (KES)" />
-                            <Area type="monotone" dataKey="target" stroke="#f59e0b" fill="url(#targetGrad)" strokeWidth={2} strokeDasharray="6 3" name="Target (KES)" />
-                            <Area type="monotone" dataKey="expenses" stroke="#ef4444" fill="url(#expGrad)" strokeWidth={1.5} name="Expenses (KES)" />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                </div>
-
-                <div className={`lg:col-span-2 rounded-2xl p-5 shadow-sm border ${cardBg} ${cardBorder}`}>
-                    <h3 className={`font-semibold mb-1 ${textPrimary}`}>Revenue by Channel</h3>
-                    <p className={`text-xs ${textMuted} mb-4`}>Current financial breakdown</p>
-                    <div className="space-y-3">
-                        {revenueByChannel.map((ch: any, i: number) => (
-                            <div key={i}>
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className={`text-xs font-medium ${textSub}`}>{ch.channel}</span>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`text-xs font-semibold ${textPrimary}`}>{ch.value}%</span>
-                                        <span className={`text-xs ${textMuted}`}>{ch.kes}</span>
-                                    </div>
-                                </div>
-                                <div className={`h-2 rounded-full ${isDark ? "bg-gray-700" : "bg-gray-100"}`}>
-                                    <div className="h-2 rounded-full transition-all duration-700" style={{ width: `${ch.value}%`, backgroundColor: ch.color }} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                <div className={`lg:col-span-3 rounded-2xl p-5 shadow-sm border ${cardBg} ${cardBorder}`}>
-                    <h3 className={`font-semibold mb-1 ${textPrimary}`}>Sales Volume by Species (kg)</h3>
-                    <p className={`text-xs ${textMuted} mb-4`}>Monthly comparison - all species</p>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={salesData} barGap={2}>
-                            <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#374151" : "#f0f0f0"} />
-                            <XAxis dataKey="month" tick={{ fontSize: 11, fill: isDark ? "#9ca3af" : "#6b7280" }} />
-                            <YAxis tick={{ fontSize: 11, fill: isDark ? "#9ca3af" : "#6b7280" }} />
-                            <Tooltip content={<CustomTooltip isDark={isDark} />} />
-                            <Legend wrapperStyle={{ fontSize: 11 }} />
-                            <Bar dataKey="tilapia" fill="#0d9488" name="Tilapia" radius={[3, 3, 0, 0]} />
-                            <Bar dataKey="catfish" fill="#f59e0b" name="Catfish" radius={[3, 3, 0, 0]} />
-                            <Bar dataKey="trout" fill="#3b82f6" name="Trout" radius={[3, 3, 0, 0]} />
-                            <Bar dataKey="carp" fill="#10b981" name="Carp" radius={[3, 3, 0, 0]} />
+                            <Legend wrapperStyle={{ fontSize: "12px", paddingTop: "12px" }} />
+                            <Bar dataKey="revenue" fill="#0d9488" name="Actual Revenue" radius={[6, 6, 0, 0]} />
+                            <Bar dataKey="target" fill={isDark ? "#374151" : "#e5e7eb"} name="Monthly Target" radius={[6, 6, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
 
-                <div className={`lg:col-span-2 rounded-2xl p-5 shadow-sm border ${cardBg} ${cardBorder}`}>
-                    <h3 className={`font-semibold mb-1 ${textPrimary}`}>Stock Distribution</h3>
-                    <p className={`text-xs ${textMuted} mb-2`}>% by species in biomass</p>
-                    <ResponsiveContainer width="100%" height={160}>
+                <div className={`rounded-2xl p-6 shadow-sm border ${cardBg} ${cardBorder}`}>
+                    <div className="mb-4">
+                        <h3 className={`font-bold text-base ${textPrimary}`}>Stock by Species</h3>
+                        <p className={`text-xs ${textMuted}`}>Current biomass breakdown (%)</p>
+                    </div>
+                    <ResponsiveContainer width="100%" height={190}>
                         <PieChart>
-                            <Pie
-                                data={stockDistribution}
-                                dataKey="value"
-                                nameKey="name"
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={45}
-                                outerRadius={72}
-                                paddingAngle={3}
-                            >
-                                {stockDistribution.map((entry: any, i: number) => (
-                                    <Cell key={i} fill={entry.fill} />
+                            <Pie data={stockDistribution} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3} dataKey="value">
+                                {stockDistribution.map((entry: any, index: number) => (
+                                    <Cell key={`cell-${index}`} fill={entry.fill} />
                                 ))}
                             </Pie>
-                            <Tooltip formatter={(v: any) => `${v}%`} contentStyle={{ background: isDark ? "#1f2937" : "#fff", border: "none", borderRadius: 12, fontSize: 12 }} />
+                            <Tooltip content={<CustomTooltip isDark={isDark} />} />
                         </PieChart>
                     </ResponsiveContainer>
-                    <div className="grid grid-cols-2 gap-1 mt-1">
+                    <div className="grid grid-cols-3 gap-1.5 mt-2">
                         {stockDistribution.map((s: any, i: number) => (
                             <div key={i} className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: s.fill }} />
-                                <span className={`text-xs ${textMuted} truncate`}>
-                                    {s.name} <strong className={textSub}>{s.value}%</strong>
-                                </span>
+                                <span className={`text-[11px] truncate ${textSub}`}>{s.name} {s.value}%</span>
                             </div>
                         ))}
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className={`rounded-2xl p-5 shadow-sm border ${cardBg} ${cardBorder}`}>
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className={`p-2 rounded-xl ${isDark ? "bg-blue-900/40" : "bg-blue-50"}`}>
-                            <Droplets size={15} className="text-blue-500" />
-                        </div>
-                        <div>
-                            <h3 className={`font-semibold text-sm ${textPrimary}`}>Water Quality</h3>
-                            <p className={`text-xs ${textMuted}`}>Live telemetry from active ponds</p>
-                        </div>
+            {/* Water Quality Telemetry Section */}
+            <div className={`rounded-2xl p-6 shadow-sm border ${cardBg} ${cardBorder}`}>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <Droplets size={16} className="text-teal-500" />
+                        <h3 className={`font-bold text-base ${textPrimary}`}>Water Quality Live Telemetry</h3>
                     </div>
-                    <div className="space-y-3">
-                        {waterQuality.map((m: any, i: number) => (
-                            <WaterGauge key={i} metric={m} isDark={isDark} />
-                        ))}
-                    </div>
+                    <span className="flex items-center gap-1.5 text-xs text-green-500 font-medium">
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Live IoT Sensors
+                    </span>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {waterQuality.map((m: any, i: number) => (
+                        <WaterGauge key={i} metric={m} isDark={isDark} />
+                    ))}
+                </div>
+            </div>
 
-                <div className={`rounded-2xl p-5 shadow-sm border ${cardBg} ${cardBorder}`}>
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className={`p-2 rounded-xl ${isDark ? "bg-purple-900/40" : "bg-purple-50"}`}>
-                            <Activity size={15} className="text-purple-500" />
-                        </div>
-                        <div>
-                            <h3 className={`font-semibold text-sm ${textPrimary}`}>Recent Activity</h3>
-                            <p className={`text-xs ${textMuted}`}>Latest farm & transaction events</p>
-                        </div>
+            {/* Bottom Row: Activity Feed & Dynamic Alerts */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Activity Feed */}
+                <div className={`rounded-2xl p-6 shadow-sm border ${cardBg} ${cardBorder}`}>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className={`font-bold text-base ${textPrimary}`}>Live Farm Activity Feed</h3>
+                        <Activity size={15} className="text-teal-500" />
                     </div>
                     <div className="space-y-3">
                         {activityFeed.map((a: any, i: number) => (
-                            <div key={i} className="flex gap-3">
-                                <div className="flex flex-col items-center">
-                                    <div className={`w-2 h-2 rounded-full flex-shrink-0 mt-1 ${a.type === "sale"
-                                            ? "bg-teal-500"
-                                            : a.type === "maintenance"
-                                                ? "bg-amber-500"
-                                                : a.type === "achievement"
-                                                    ? "bg-green-500"
-                                                    : a.type === "supplier"
-                                                        ? "bg-blue-500"
-                                                        : "bg-gray-400"
-                                        }`} />
-                                    {i < activityFeed.length - 1 && <div className={`w-0.5 flex-1 mt-1 ${isDark ? "bg-gray-700" : "bg-gray-100"}`} />}
-                                </div>
-                                <div className="pb-3 flex-1 min-w-0">
-                                    <p className={`text-xs leading-relaxed ${textSub}`}>{a.action}</p>
-                                    <div className={`flex items-center gap-2 mt-0.5 text-xs ${textMuted}`}>
-                                        <span>{a.time}</span>
-                                        <span>·</span>
-                                        <span>{a.user}</span>
-                                    </div>
+                            <div key={i} className={`p-3 rounded-xl border flex items-start gap-3 text-xs ${isDark ? "bg-gray-800/60 border-gray-700" : "bg-gray-50/70 border-gray-100"}`}>
+                                <div className="w-2 h-2 rounded-full bg-teal-500 mt-1.5 flex-shrink-0" />
+                                <div className="flex-1">
+                                    <p className={`font-medium ${textPrimary}`}>{a.action}</p>
+                                    <p className={`text-[11px] mt-0.5 ${textMuted}`}>{a.time} · {a.user}</p>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <div className={`rounded-2xl p-5 shadow-sm border ${cardBg} ${cardBorder}`}>
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className={`p-2 rounded-xl ${isDark ? "bg-amber-900/30" : "bg-amber-50"}`}>
-                            <Bell size={15} className="text-amber-500" />
-                        </div>
-                        <div>
-                            <h3 className={`font-semibold text-sm ${textPrimary}`}>Alerts & Thresholds</h3>
-                            <p className={`text-xs ${textMuted}`}>Requires attention</p>
-                        </div>
-                    </div>
-                    <div className="space-y-3">
-                        {[
-                            { type: "warning", msg: "Pond RT-003: O2 dropped to 5.2 mg/L. Check aerator.", priority: "High" },
-                            { type: "info", msg: "Tilapia Batch ready for harvest in 3 days.", priority: "Medium" },
-                            { type: "success", msg: "All pond telemetry connected to database.", priority: "Info" },
-                            { type: "warning", msg: "Supplier payments reconciliation pending.", priority: "Medium" },
-                        ].map((alert, i) => (
-                            <div
-                                key={i}
-                                className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs ${alert.type === "warning"
-                                        ? isDark
-                                            ? "bg-amber-900/20 border-amber-800/40"
-                                            : "bg-amber-50 border-amber-200"
-                                        : alert.type === "success"
-                                            ? isDark
-                                                ? "bg-green-900/20 border-green-800/40"
-                                                : "bg-green-50 border-green-200"
-                                            : isDark
-                                                ? "bg-blue-900/20 border-blue-800/40"
-                                                : "bg-blue-50 border-blue-200"
-                                    }`}
-                            >
-                                {alert.type === "warning" ? (
-                                    <AlertTriangle size={13} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                                ) : alert.type === "success" ? (
-                                    <CheckCircle size={13} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                ) : (
-                                    <Bell size={13} className="text-blue-500 flex-shrink-0 mt-0.5" />
-                                )}
-                                <div>
-                                    <span className={`${isDark ? "text-gray-200" : "text-gray-700"} leading-relaxed`}>{alert.msg}</span>
-                                    <span
-                                        className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${alert.priority === "High"
-                                                ? "bg-red-100 text-red-600"
-                                                : alert.priority === "Medium"
-                                                    ? "bg-amber-100 text-amber-600"
-                                                    : "bg-blue-100 text-blue-600"
-                                            }`}
-                                    >
-                                        {alert.priority}
-                                    </span>
-                                </div>
+                {/* Phase 13: Dynamic Alerts & Operational Thresholds */}
+                <div className={`rounded-2xl p-6 shadow-sm border ${cardBg} ${cardBorder}`}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <div className={`p-2 rounded-xl ${isDark ? "bg-amber-900/30 text-amber-400" : "bg-amber-50 text-amber-600"}`}>
+                                <Bell size={16} />
                             </div>
-                        ))}
+                            <div>
+                                <h3 className={`font-bold text-base ${textPrimary}`}>Dynamic Alerts & Thresholds</h3>
+                                <p className={`text-xs ${textMuted}`}>{alerts.length} active notification(s)</p>
+                            </div>
+                        </div>
+                        {alerts.length > 0 && (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 animate-pulse">
+                                {alerts.length} Active
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="space-y-3">
+                        {alerts.length === 0 ? (
+                            <div className={`p-6 rounded-xl border text-center ${isDark ? "bg-gray-800/40 border-gray-700" : "bg-green-50/50 border-green-200"}`}>
+                                <CheckCircle size={28} className="text-green-500 mx-auto mb-2" />
+                                <p className={`text-sm font-semibold ${textPrimary}`}>All Systems Optimal</p>
+                                <p className={`text-xs ${textMuted} mt-0.5`}>No pond telemetry anomalies or overdue financial invoices detected.</p>
+                            </div>
+                        ) : (
+                            alerts.map((alert) => (
+                                <div
+                                    key={alert.id}
+                                    className={`flex items-start justify-between gap-3 p-3.5 rounded-xl border text-xs transition-all ${
+                                        alert.priority === "CRITICAL"
+                                            ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/40"
+                                            : alert.priority === "HIGH" || alert.type === "warning"
+                                            ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/40"
+                                            : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/40"
+                                    }`}
+                                >
+                                    <div className="flex items-start gap-2.5">
+                                        {alert.priority === "CRITICAL" || alert.priority === "HIGH" ? (
+                                            <AlertTriangle size={15} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                                        ) : alert.type === "success" ? (
+                                            <CheckCircle size={15} className="text-green-500 flex-shrink-0 mt-0.5" />
+                                        ) : (
+                                            <Bell size={15} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                                        )}
+                                        <div>
+                                            <p className={`font-medium ${isDark ? "text-gray-200" : "text-gray-800"} leading-relaxed`}>{alert.message}</p>
+                                            <div className="flex items-center gap-2 mt-1.5">
+                                                <span
+                                                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                                        alert.priority === "CRITICAL"
+                                                            ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
+                                                            : alert.priority === "HIGH"
+                                                            ? "bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200"
+                                                            : "bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200"
+                                                    }`}
+                                                >
+                                                    {alert.priority}
+                                                </span>
+                                                <span className={`text-[10px] ${textMuted}`}>
+                                                    {new Date(alert.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => handleDismissAlert(alert.id)}
+                                        title="Dismiss Alert"
+                                        className="p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 text-gray-500 transition-colors flex-shrink-0"
+                                    >
+                                        <Check size={14} />
+                                    </button>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>
