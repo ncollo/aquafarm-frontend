@@ -41,6 +41,7 @@ export function Footer() {
     { label: "Gallery", path: "/gallery" },
     { label: "Careers", path: "/careers" },
     { label: "Contact", path: "/contact" },
+    { label: "Staff Portal", path: "/login" },
   ];
 
   return (
@@ -197,10 +198,12 @@ export function Footer() {
       <div className="border-t border-teal-800 bg-teal-950">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-sm text-teal-400">
           <p>© {new Date().getFullYear()} Aquafarm Fisheries. {t("allRightsReserved")}.</p>
-          <div className="flex gap-4">
+          <div className="flex items-center gap-4 text-xs">
             <a href="#" className="hover:text-amber-400 transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-amber-400 transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-amber-400 transition-colors">Sitemap</a>
+            <Link to="/login" className="hover:text-amber-400 text-teal-300 font-semibold transition-colors flex items-center gap-1">
+              <span>🔒</span> Staff Portal
+            </Link>
           </div>
         </div>
       </div>

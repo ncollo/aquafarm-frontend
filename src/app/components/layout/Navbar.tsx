@@ -170,15 +170,7 @@ export function Navbar() {
                   </div>
                 )}
               </div>
-            ) : (
-              <Link
-                to="/login"
-                className="flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-white px-3 py-0.5 rounded-full transition-colors text-xs font-semibold"
-              >
-                <LayoutDashboard size={12} />
-                <span>{t("dashboard")}</span>
-              </Link>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -328,15 +320,7 @@ export function Navbar() {
                     Sign Out
                   </button>
                 </>
-              ) : (
-                <Link
-                  to="/login"
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 transition-colors"
-                >
-                  <LayoutDashboard size={15} />
-                  {t("dashboard")}
-                </Link>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
