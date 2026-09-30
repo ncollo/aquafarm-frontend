@@ -135,37 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: true };
     } catch (err: any) {
       console.error("[Auth] Connection error during login:", err);
-      // Fallback for offline demo accounts
-      if (email.toLowerCase().includes("admin") && password === "admin123") {
-        const mockAdmin: AuthUser = {
-          id: "admin-1",
-          name: "John Mwangi",
-          email: "admin@aquafarm.co.ke",
-          role: "ADMIN",
-          avatar: "JM",
-        };
-        const mockToken = "mock-admin-token";
-        setUser(mockAdmin);
-        setToken(mockToken);
-        localStorage.setItem("aquafarm-token", mockToken);
-        localStorage.setItem("aquafarm-user", JSON.stringify(mockAdmin));
-        return { success: true };
-      } else if (email.toLowerCase().includes("manager") && password === "manager123") {
-        const mockManager: AuthUser = {
-          id: "mgr-1",
-          name: "Grace Wanjiku",
-          email: "manager@aquafarm.co.ke",
-          role: "MANAGER",
-          avatar: "GW",
-        };
-        const mockToken = "mock-manager-token";
-        setUser(mockManager);
-        setToken(mockToken);
-        localStorage.setItem("aquafarm-token", mockToken);
-        localStorage.setItem("aquafarm-user", JSON.stringify(mockManager));
-        return { success: true };
-      }
-      return { success: false, error: "Unable to connect to server. Please try again." };
+      return { success: false, error: "Unable to connect to the authentication server. Please check your network and credentials." };
     }
   };
 
