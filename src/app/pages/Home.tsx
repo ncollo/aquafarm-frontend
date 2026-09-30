@@ -53,33 +53,6 @@ const stats = [
   { icon: Award, value: "12+", label: "Years of Excellence", color: "text-amber-600" },
 ];
 
-const fishSpecies = [
-  {
-    name: "Nile Tilapia",
-    scientific: "Oreochromis niloticus",
-    image: "https://images.unsplash.com/photo-1649347173558-a305d7b8ff98?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0aWxhcGlhJTIwZmlzaCUyMHdhdGVyJTIwYXF1YWN1bHR1cmV8ZW58MXx8fHwxNzc0NTQ0MzY4fDA&ixlib=rb-4.1.0&q=80&w=1080",
-    stock: "High",
-    priceKg: "KES 350",
-    color: "bg-green-100 text-green-700",
-  },
-  {
-    name: "African Catfish",
-    scientific: "Clarias gariepinus",
-    image: "https://images.unsplash.com/photo-1607629194620-a9726803827c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmaXNoJTIwZmFybSUyMGhhcnZlc3QlMjBmcmVzaCUyMGZpc2glMjB3b3JrZXJzfGVufDF8fHx8MTc3NDU0NDM4MXww&ixlib=rb-4.1.0&q=80&w=1080",
-    stock: "Medium",
-    priceKg: "KES 400",
-    color: "bg-amber-100 text-amber-700",
-  },
-  {
-    name: "Rainbow Trout",
-    scientific: "Oncorhynchus mykiss",
-    image: "https://images.unsplash.com/photo-1770529882297-d60092c0c834?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxmcmVzaHdhdGVyJTIwZmlzaCUyMGNhcnAlMjBwb25kJTIwc3VyZmFjZXxlbnwxfHx8fDE3NzQ1NDQzODR8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    stock: "Low",
-    priceKg: "KES 650",
-    color: "bg-red-100 text-red-700",
-  },
-];
-
 const services = [
   {
     icon: Fish,
@@ -292,52 +265,6 @@ export function Home() {
                 </div>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── LIVE FISH AVAILABILITY ─── */}
-      <section className="py-14 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-green-600 text-sm font-semibold uppercase tracking-wide">Live Today</span>
-              </div>
-              <h2 className="text-gray-900" style={{ fontFamily: "Playfair Display, serif", fontSize: "1.875rem", fontWeight: 700 }}>
-                Fish Availability
-              </h2>
-              <p className="text-gray-500 mt-1 text-sm">Updated daily — stock as of {new Date().toLocaleDateString("en-KE", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
-            </div>
-            <Link to="/store" className="flex items-center gap-2 text-teal-700 font-semibold hover:text-teal-600 transition-colors">
-              View Full Store <ArrowRight size={15} />
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {fishSpecies.map((fish, i) => (
-              <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow border border-gray-100">
-                <div className="h-48 overflow-hidden relative">
-                  <ImageWithFallback src={fish.image} alt={fish.name} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
-                  <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold ${fish.color}`}>
-                    {fish.stock} Stock
-                  </div>
-                </div>
-                <div className="p-5">
-                  <h3 className="text-gray-900 font-semibold text-lg">{fish.name}</h3>
-                  <p className="text-gray-400 text-xs italic mb-3">{fish.scientific}</p>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-gray-500 text-xs">Price per Kg</p>
-                      <p className="text-teal-700 font-bold text-lg">{fish.priceKg}</p>
-                    </div>
-                    <Link to="/store" className="bg-teal-700 hover:bg-teal-600 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors">
-                      Order Now
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
