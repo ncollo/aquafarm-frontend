@@ -1,0 +1,42 @@
+{
+  "code-markers": [
+    {
+      "name": "UI Pages & Views",
+      "patterns": [
+        "src/app/pages/**",
+        "src/app/components/**"
+      ]
+    },
+    {
+      "name": "State Management & Auth Context",
+      "patterns": [
+        "src/app/context/**"
+      ]
+    },
+    {
+      "name": "API Services & Client Utilities",
+      "patterns": [
+        "src/app/services/**",
+        "src/utils/**"
+      ]
+    },
+    {
+      "name": "Deployment & Infrastructure",
+      "patterns": [
+        "Dockerfile",
+        "nginx.conf",
+        "docker-compose.yml",
+        "vercel.json",
+        ".github/**"
+      ]
+    },
+    {
+      "name": "Generated & Third Party Assets",
+      "patterns": [
+        "dist/**",
+        "node_modules/**",
+        "package-lock.json"
+      ]
+    }
+  ]
+}
